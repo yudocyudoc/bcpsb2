@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"
 import { EmotionButton } from './EmotionButton'; // Importar EmotionButton
 import type { SelectedSubEmotions, OtherEmotions } from '@/types/mood';
-import type { EmotionHierarchy } from '@/config/emotionConfig '; // Corrected import path
+import type { EmotionHierarchy } from '@/config/emotionConfig'; // Corrected import path
 import { ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react';
 
 interface Step2EmocionesProps {

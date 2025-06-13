@@ -19,7 +19,7 @@ import type {
 } from '@/types/mood'; 
 
 // --- Configuración de Emociones ---
-import { emotionHierarchy, emotionsList } from '@/config/emotionConfig ';
+import { emotionHierarchy, emotionsList } from '@/config/emotionConfig';
 
 // --- Subcomponentes de Pasos ---
 import { StepIndicator } from './stepper-parts/StepIndicator';
