@@ -143,7 +143,6 @@ export default defineConfig({
         tailwindcss(),
         svgr(),
         VitePWA(pwaOptions),
-        // visualizer({ open: true, gzipSize: true, brotliSize: true }), 
     ],
     resolve: {
         alias: {
@@ -151,21 +150,25 @@ export default defineConfig({
         },
     },
     build: {
-        target: 'esnext',
+        target: 'es2015',
         minify: 'terser',
         cssCodeSplit: true,
         sourcemap: false,
         rollupOptions: {
             output: {
-                manualChunks: (id) => {
-                    if (id.includes('node_modules')) {
-                        if (id.includes('react-dom') || id.includes('react')) return 'vendor-react';
-                        if (id.includes('@supabase')) return 'vendor-supabase';
-                        if (id.includes('@lexical')) return 'vendor-lexical';
-                        if (id.includes('@radix-ui') || id.includes('@floating-ui')) return 'vendor-ui-primitives';
-                    }
-                }
+                entryFileNames: 'assets/[name].[hash].js',
+                chunkFileNames: 'assets/[name].[hash].js',
+                assetFileNames: 'assets/[name].[hash].[ext]'
+            }
+        },
+        terserOptions: {
+            compress: {
+                drop_console: true,
+                drop_debugger: true
             }
         }
+    },
+    optimizeDeps: {
+        include: ['react', 'react-dom']
     }
 });

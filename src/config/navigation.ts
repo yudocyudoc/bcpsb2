@@ -2,30 +2,29 @@
 import { Home, HeartHandshake, Smile, Settings, Users, Edit3, ShieldCheck, BookHeart } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react'; // Asegúrate de importar LucideIcon
 
+// Define y exporta ROLES
+export const ROLES = {
+  ADMIN: 'admin',
+  EDITOR: 'editor',
+  USER: 'usuario_registrado',
+} as const;
+
+// Define el tipo AppRole
+export type AppRole = typeof ROLES[keyof typeof ROLES];
+
+// Define la interfaz NavItem
 export interface NavItem {
   title: string;
   href: string;
-  icon?: LucideIcon; // Icono es opcional
-  label?: string; // Para "Platform", "Projects"
-  isChilren?: boolean; // Si tiene hijos para renderizar como Collapsible
+  icon?: LucideIcon;
+  label?: string;
+  isChilren?: boolean;
   children?: NavItem[];
-  roles?: string[]; // Para filtrado futuro ('admin', 'editor', 'usuario_registrado')
-  isExternal?: boolean; // Para enlaces externos si los necesitas
-  badge?: string | number; // Para notificaciones o contadores
-  separator?: boolean; // Para añadir un separador antes de este item
+  roles?: AppRole[]; // Cambia string[] por AppRole[]
+  isExternal?: boolean;
+  badge?: string | number;
+  separator?: boolean;
 }
-
-// Define los roles que tenemos
-export const ROLES = {
-  ADMIN: 'admin',
-  EDITOR: 'editor', // Si lo necesitas
-  USER: 'usuario_registrado',
-  // DOCENTE: 'docente', // Si lo necesitas
-  // TEMPORAL: 'temporal', // Si lo necesitas
-} as const;
-
-export type AppRole = typeof ROLES[keyof typeof ROLES];
-
 
 // Navegación principal para todos los usuarios logueados (o la base)
 export const mainNavItems: NavItem[] = [
@@ -39,7 +38,6 @@ export const mainNavItems: NavItem[] = [
       { title: 'Botiquín Emocional', href: '/botiquin', icon: HeartHandshake, roles: [ROLES.USER, ROLES.ADMIN] },
       { title: 'Mi Estado de Ánimo', href: '/mi-estado-animo', icon: Smile, roles: [ROLES.USER, ROLES.ADMIN] },
       { title: 'Historias Interactivas', href: '/historias', icon: BookHeart, roles: [ROLES.USER, ROLES.ADMIN] }, // <-- NUEVO ENLACE
-
     ],
   },
   // Puedes añadir más grupos aquí, por ejemplo "Recursos Interactivos" en el futuro
