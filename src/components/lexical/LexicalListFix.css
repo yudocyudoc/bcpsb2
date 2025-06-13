@@ -1,0 +1,102 @@
+/* === LexicalListFix.css (Versión más robusta con tus clases) === */
+
+/* 1. RESET GENERAL PARA TODOS los <li> dentro del editor */
+.editor-container .prose li {
+  list-style-type: none !important;
+  padding-left: 0 !important;
+  position: relative; /* Necesario para posicionar los ::before */
+  margin-bottom: 0.25rem;
+}
+/* Asegurar que ningún ::marker o ::before preexistente se muestre por defecto */
+.editor-container .prose li::marker,
+.editor-container .prose li::before {
+  content: "" !important; /* O content: none !important; */
+  display: none !important;
+  /* Resto de resets si es necesario: font-size:0; padding:0; margin:0; etc. */
+}
+
+/* --- ESTILOS PARA LISTAS Y SUS ITEMS BASADOS EN CLASES DE NIVEL --- */
+
+/* A. Items de PRIMER NIVEL NUMERADOS (clase: .decimal-primer-nivel) */
+.editor-container .prose li.decimal-primer-nivel {
+  list-style-type: decimal !important; /* Dejamos que el navegador/prose maneje el número */
+  padding-left: 1.9em !important;    /* Espacio para el número y el punto. Ajustar. */
+                                     /* El valor exacto puede depender del font-size. */
+  margin-left: 0.1em; /* Pequeño ajuste para alinear con sub-bullets si es necesario */
+}
+/* Nos aseguramos que nuestro ::before custom no aparezca en estos */
+.editor-container .prose li.decimal-primer-nivel::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* B. Items de SEGUNDO NIVEL con bullet (clase: .bullet-segundo-nivel) */
+.editor-container .prose li.bullet-segundo-nivel {
+  padding-left: 1.25em !important; /* Espacio para el ::before */
+}
+.editor-container .prose li.bullet-segundo-nivel::before {
+  content: "•" !important;        /* Bullet relleno */
+  display: inline-block !important; /* Esencial para que se muestre */
+  position: absolute;
+  left: 0;                        /* Alineado al inicio del padding-left */
+  top: 0.1em;                     /* Ajuste vertical. Probar valores como 0.15em, 0.2em */
+  line-height: 1;                 /* Puede ayudar a la alineación vertical */
+  font-size: 1em;                 /* Tamaño del bullet */
+  color: inherit;                 /* Hereda color del texto */
+}
+
+/* C. Items de TERCER NIVEL con bullet (clase: .bullet-tercer-nivel) */
+.editor-container .prose li.bullet-tercer-nivel {
+  padding-left: 1.25em !important; /* Espacio para el ::before */
+}
+.editor-container .prose li.bullet-tercer-nivel::before {
+  content: "◦" !important;        /* Bullet círculo vacío */
+  display: inline-block !important; /* Esencial para que se muestre */
+  position: absolute;
+  left: 0;
+  top: 0.1em;                     /* Ajuste vertical */
+  line-height: 1;
+  font-size: 1em;
+  color: inherit;
+}
+
+/* --- INDENTACIÓN PARA LAS LISTAS ANIDADAS (UL/OL) --- */
+
+/* UL/OL que es hijo de un LI (este selector es general para cualquier nivel de anidamiento de lista) */
+/* Aplicamos padding al UL/OL para la indentación, no al LI contenedor */
+.editor-container .prose li > ul.lexical-ul,
+.editor-container .prose li > ol.lexical-ol {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+  padding-left: 2em !important; /* Indentación estándar para sublistas. Ajustar según gusto. */
+                                /* Este es el que crea el efecto visual de anidamiento. */
+}
+
+/* --- CASO ESPECIAL: LI que solo actúa como contenedor de una sublista --- */
+/* Si un LI tiene la clase .lexical-li-container (porque tu plugin JS la añadió),
+   y queremos que NO muestre su propio marcador (porque su único propósito es anidar),
+   aseguramos que su ::before esté oculto. El reset general ya debería hacer esto,
+   pero podemos ser más explícitos si es necesario. */
+.editor-container .prose li.lexical-li-container::before {
+    content: none !important;
+    display: none !important;
+}
+/* También, un LI contenedor no debería tener su propio padding para un marcador que no va a mostrar */
+.editor-container .prose li.lexical-li-container {
+    padding-left: 0 !important; /* O solo el padding-left que necesite para alinearse con el texto padre si tuviera */
+}
+
+
+.editor-table {
+  width: 100%; /* O un ancho específico */
+}
+.editor-table-cell {
+  background-color: #666 ;
+}
+.editor-table-cell-header {
+font-size: large;
+}
+/* Puedes añadir :even o :odd para filas si quieres bandas de color */
+.editor-table-row:nth-child(even) {
+   background-color: #f8f8f8;
+}
