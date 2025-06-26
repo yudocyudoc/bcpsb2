@@ -148,7 +148,7 @@ const DashboardLayoutContent = () => {
               </div>
             </header>
             <main id='mainScrollContainer'
-              className="flex flex-1 flex-col gap-4 p-4 pt-2 sm:p-6 sm:pt-2 md:gap-8 overflow-y-auto"
+              className="flex flex-1 flex-col gap-4 p-4 pt-2 sm:p-6 sm:pt-2 md:gap-8 overflow-y-auto relative"
             >
             <Outlet />
           </main>    

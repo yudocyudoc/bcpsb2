@@ -1,10 +1,10 @@
 // src/components/layout/app-sidebar.tsx
 import { Link } from 'react-router-dom';
-import { NavMain } from '../../components/nav/nav-main.tsx'; // Asumiendo que esta ruta es correcta
-import { NavUser } from '../../components/nav/nav-user.tsx'; // Asumiendo que esta ruta es correcta
-import { mainNavItems, adminNavItems } from '../../config/navigation.ts'; 
-import { useAuth } from '../../contexts/AuthContext.tsx';
-import { cn } from '../../lib/utils.ts';
+import { NavMain } from '@/components/nav/nav-main'; // Asumiendo que esta ruta es correcta
+import { NavUser } from '@/components/nav/nav-user'; // Asumiendo que esta ruta es correcta
+import { mainNavItems, adminNavItems } from '@/config/navigation'; 
+import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '../../lib/utils';
 
 // NOTA: Tu error dice que la importación de 'mainNavItems' y 'adminNavItems' está sin usar.
 // Esto es porque las variables que usas abajo tienen un nombre diferente.

@@ -4,7 +4,6 @@
 import React from "react";
 import { Link } from 'react-router-dom'; // Para el logo
 import { useAuth } from '@/contexts/AuthContext';
-import { cn } from '@/lib/utils';
 import { NavMain } from "./NavMain"; // Ajusta la ruta
 import { NavUser } from "./NavUser"; // Ajusta la ruta
 import {
@@ -32,15 +31,15 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
     // También puede ser "offcanvas" (para móviles) o "none"
     // El bloque "sidebar-07" lo usa así.
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader className="p-2"> {/* Añadido padding al header */}
+      <SidebarHeader className="p-1"> {/* Añadido padding al header */}
         <Link to="/" className="flex items-center gap-2 px-2 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md">
-        <Icons.Logo className="h-7 w-7 text-pink-800/50" />
-          <span className={cn(
+        <Icons.Logo className="h-8 w-8 text-pink-800/50" />
+        {/*}  <span className={cn(
             "font-semibold text-lg",
             "group-data-[collapsible=icon]:sr-only" // Reacciona al 'data-collapsible' del 'group' padre (Sidebar)
           )}>
-            BCP 
-          </span>
+            
+          </span>*/}
         </Link>
       </SidebarHeader>
       <SidebarContent>

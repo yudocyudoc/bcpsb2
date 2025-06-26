@@ -8,7 +8,11 @@ import { ROLES } from '@/config/navigation'; // Asumiendo que ROLES se exporta d
 
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 // Importa aquí tus futuros componentes de página principal, layout, etc.
-import { HomePage } from '@/pages/HomePage';
+
+import HomePage from '@/pages/HomePage';
+
+
+
 
 const LazyBotiquinCategoriesPage = React.lazy(() => import('@/pages/botiquin/BotiquinCategoriesPage').then(module => ({default: module.BotiquinCategoriesPage})));
 const LazyBotiquinTechniquesListPage = React.lazy(() => import('@/pages/botiquin/BotiquinTechniquesListPage').then(module => ({default: module.BotiquinTechniquesListPage})));
@@ -16,6 +20,8 @@ const LazyBotiquinTechniqueCreatePage = React.lazy(() => import('@/pages/admin/b
 const LazyMoodTrackerPage = React.lazy(() =>  import('@/pages/MoodTrackerPage').then(module => ({ default: module.default })));
 const LazyInteractiveStoriesListPage = React.lazy(() => import('@/pages/interactive/InteractiveStoriesListPage').then(module => ({ default: module.InteractiveStoriesListPage })));
 const LazyInteractiveStoryPlayerPage = React.lazy(() => import('@/pages/interactive/InteractiveStoryPlayerPage').then(module => ({ default: module.InteractiveStoryPlayerPage })));
+const LazyProfilePage = React.lazy(() => import('@/pages/auth/ProfilePage').then(module => ({ default: module.ProfilePage })));
+const LazyObservatoryTestPage = React.lazy(() => import('@/pages/ObservatoryTestPage').then(module => ({ default: module.ObservatoryTestPage })));
 
 
 
@@ -140,9 +146,8 @@ export const AppRouter = () => {
         <Route path="historias/:storyId" element={<React.Suspense fallback={<LoadingFallback />}> <LazyInteractiveStoryPlayerPage /> </React.Suspense>  }/>
 
         <Route path="mi-estado-animo" element={<React.Suspense fallback={<LoadingFallback />}> <LazyMoodTrackerPage /> </React.Suspense>  }/>
-         
-
-        
+        <Route path="perfil"element={<React.Suspense fallback={<LoadingFallback />}> <LazyProfilePage /> </React.Suspense>  }/>        
+        <Route path="observatorio"element={<React.Suspense fallback={<LoadingFallback />}> <LazyObservatoryTestPage /> </React.Suspense>  }/>        
 
 
         {/* Rutas de Administración */}

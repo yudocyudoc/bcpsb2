@@ -6,9 +6,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { MoodEntry } from '@/types/mood'; // Tu tipo MoodEntry actualizado
-import { CalendarDays, Loader2 } from 'lucide-react';
+import { CalendarDays, Loader2, CloudUpload, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface PreviousEntriesAccordionProps {
@@ -29,6 +35,35 @@ const LoadingEntrySkeleton: React.FC = () => (
     <Skeleton className="h-3 w-4/6" />
   </div>
 );
+
+// Componente para mostrar el ícono de estado de sincronización con un tooltip
+const SyncStatusIcon: React.FC<{ status: MoodEntry['syncStatus'] }> = ({ status }) => {
+  if (!status || status === 'synced') {
+    return null;
+  }
+
+  const iconMap = {
+    pending: {
+      icon: <CloudUpload className="h-4 w-4 text-blue-500 animate-pulse" />,
+      message: "Pendiente de sincronización",
+    },
+    error: {
+      icon: <AlertCircle className="h-4 w-4 text-destructive" />,
+      message: "Error al sincronizar. Se reintentará más tarde.",
+    },
+  };
+
+  const currentStatus = iconMap[status as keyof typeof iconMap];
+
+  if (!currentStatus) return null;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild><div className="flex items-center">{currentStatus.icon}</div></TooltipTrigger>
+      <TooltipContent><p>{currentStatus.message}</p></TooltipContent>
+    </Tooltip>
+  );
+};
 
 export const PreviousEntriesAccordion: React.FC<PreviousEntriesAccordionProps> = ({
   entries,
@@ -59,13 +94,14 @@ export const PreviousEntriesAccordion: React.FC<PreviousEntriesAccordionProps> =
   }
 
   return (
-    <div className="mt-12 border-t pt-8">
+    <TooltipProvider delayDuration={100}>
+      <div className="mt-12 border-t pt-8">
       <h2 className="text-xl sm:text-2xl font-bold mb-4">Registros anteriores</h2>
       <Accordion type="single" collapsible className="w-full space-y-3">
         {entries.map((entry) => (
           // Usar localId que siempre existirá y es único para la key de React
           <AccordionItem key={entry.localId} value={entry.localId} className="border rounded-lg bg-card shadow-sm overflow-hidden">
-            <AccordionTrigger className="px-4 py-3 text-left hover:bg-muted/50 transition-colors [&[data-state=open]>svg]:rotate-180">
+            <AccordionTrigger className="px-4 py-3 text-left hover:bg-muted/50 transition-colors [&[data-state=open]>svg:last-child]:rotate-180">
               <div className="flex-1">
                 <p className="font-semibold text-sm sm:text-base mb-1 line-clamp-2">
                   {entry.suceso || <span className="italic text-muted-foreground">Suceso no descrito</span>}
@@ -83,6 +119,9 @@ export const PreviousEntriesAccordion: React.FC<PreviousEntriesAccordionProps> =
                         })
                       : 'Fecha inválida'}
                 </p>
+              </div>
+              <div className="ml-2 flex-shrink-0">
+                <SyncStatusIcon status={entry.syncStatus} />
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4 pt-0 text-sm">
@@ -154,6 +193,7 @@ export const PreviousEntriesAccordion: React.FC<PreviousEntriesAccordionProps> =
           </Button>
         </div>
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 };

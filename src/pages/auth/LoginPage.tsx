@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext.tsx'; // Tu AuthContext
-import { Button } from "../../components/ui/button.tsx";
-import { Input } from "../../components/ui/input.tsx";
-import { Label } from "../../components/ui/label.tsx";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card.tsx";
-import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert.tsx";
+import { useAuth } from '../../contexts/AuthContext'; // Tu AuthContext
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 export function LoginPage() {
@@ -76,7 +76,7 @@ export function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="nombre de usuario o correo electrónico"
+                autoComplete="email"
                 placeholder="escribe tu correoe lectrónico"
               />
             </div>

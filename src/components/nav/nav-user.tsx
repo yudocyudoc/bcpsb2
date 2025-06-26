@@ -1,8 +1,8 @@
 // src/components/nav/NavUser.tsx
-import { Button } from '../../components/ui/button.tsx';
-import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar.tsx";
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext.tsx'; // Tu AuthContext de Supabase
+import { useAuth } from '@/contexts/AuthContext'; // Tu AuthContext de Supabase
 
 export function NavUser() {
   const { user, profile, signOut: supabaseSignOut, role } = useAuth();

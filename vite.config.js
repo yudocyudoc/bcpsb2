@@ -1,14 +1,12 @@
 // vite.config.ts
-
-import path from 'node:path'
+import path from 'node:path';
 import tailwindcss from "@tailwindcss/vite";
 import svgr from 'vite-plugin-svgr';
-import { VitePWA, type VitePWAOptions } from 'vite-plugin-pwa';
+import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
-
 // Opciones de configuración para la Progressive Web App (PWA)
-const pwaOptions: Partial<VitePWAOptions> = {
+var pwaOptions = {
     // 'autoUpdate' recarga la PWA automáticamente cuando hay una nueva versión del Service Worker.
     registerType: 'autoUpdate',
     // Inyecta automáticamente el script de registro del Service Worker.
@@ -66,7 +64,6 @@ const pwaOptions: Partial<VitePWAOptions> = {
         navigateFallback: '/index.html',
         // Archivos que se guardarán en la caché de forma proactiva (precaching) al instalar el SW.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2,json}'],
-        
         // Estrategias de caché para peticiones en tiempo de ejecución (runtime).
         runtimeCaching: [
             // ESTRATEGIA 1: Fuentes de Google (CacheFirst)
@@ -80,16 +77,17 @@ const pwaOptions: Partial<VitePWAOptions> = {
                     cacheableResponse: { statuses: [0, 200] },
                 },
             },
-
             // ESTRATEGIA 2: Progreso del Usuario (NetworkFirst)
             // Prioridad: datos frescos. Intenta ir a la red primero. Si falla, usa la última versión guardada en caché.
             // Se pone antes de la regla general de contenido para que tenga prioridad.
             {
-                urlPattern: ({ url, request }) => 
-                    request.method === 'GET' &&
-                    url.hostname.includes('audycvtgnqotmftrldjo.supabase.co') &&
-                    (url.pathname.includes('/rest/v1/user_story_progress') || 
-                     url.pathname.includes('/rest/v1/user_story_visited_passages')),
+                urlPattern: function (_a) {
+                    var url = _a.url, request = _a.request;
+                    return request.method === 'GET' &&
+                        url.hostname.includes('audycvtgnqotmftrldjo.supabase.co') &&
+                        (url.pathname.includes('/rest/v1/user_story_progress') ||
+                            url.pathname.includes('/rest/v1/user_story_visited_passages'));
+                },
                 handler: 'NetworkFirst',
                 options: {
                     cacheName: 'api-user-progress-cache',
@@ -97,15 +95,16 @@ const pwaOptions: Partial<VitePWAOptions> = {
                     cacheableResponse: { statuses: [0, 200] },
                 },
             },
-
             // ESTRATEGIA 3: Contenido Principal - Técnicas, Historias, etc. (StaleWhileRevalidate)
             // Prioridad: rapidez. Muestra al instante lo que hay en caché (si hay algo).
             // Mientras tanto, va a la red a buscar una versión nueva para la próxima vez.
             {
-                urlPattern: ({ url, request }) => 
-                    request.method === 'GET' &&
-                    url.hostname.includes('audycvtgnqotmftrldjo.supabase.co') &&
-                    url.pathname.startsWith('/rest/v1/'),
+                urlPattern: function (_a) {
+                    var url = _a.url, request = _a.request;
+                    return request.method === 'GET' &&
+                        url.hostname.includes('audycvtgnqotmftrldjo.supabase.co') &&
+                        url.pathname.startsWith('/rest/v1/');
+                },
                 handler: 'StaleWhileRevalidate',
                 options: {
                     cacheName: 'api-content-cache',
@@ -113,15 +112,16 @@ const pwaOptions: Partial<VitePWAOptions> = {
                     cacheableResponse: { statuses: [0, 200] },
                 },
             },
-
             // ESTRATEGIA 4: Mutaciones - Guardar, Actualizar, Borrar (NetworkOnly + Background Sync)
             // Prioridad: integridad de datos. Siempre intenta ir a la red. Si falla, pone la petición en una cola 
             // para reintentarla automáticamente cuando vuelva la conexión.
             {
-                urlPattern: ({ url, request }) => 
-                    request.method !== 'GET' &&
-                    url.hostname.includes('audycvtgnqotmftrldjo.supabase.co') &&
-                    url.pathname.startsWith('/rest/v1/'),
+                urlPattern: function (_a) {
+                    var url = _a.url, request = _a.request;
+                    return request.method !== 'GET' &&
+                        url.hostname.includes('audycvtgnqotmftrldjo.supabase.co') &&
+                        url.pathname.startsWith('/rest/v1/');
+                },
                 handler: 'NetworkOnly',
                 options: {
                     backgroundSync: {
@@ -135,7 +135,6 @@ const pwaOptions: Partial<VitePWAOptions> = {
         ]
     }
 };
-
 // Configuración principal de Vite
 export default defineConfig({
     plugins: [
@@ -157,7 +156,7 @@ export default defineConfig({
         chunkSizeWarningLimit: 1000, // Aumentar límite a 1MB
         rollupOptions: {
             output: {
-                manualChunks(id) {
+                manualChunks: function (id) {
                     // Separar Phaser en sub-chunks
                     if (id.includes('node_modules/phaser/src/gameobjects/')) {
                         return 'phaser-gameobjects';
@@ -174,31 +173,26 @@ export default defineConfig({
                     if (id.includes('phaser3-rex-plugins')) {
                         return 'phaser-plugins';
                     }
-                    
                     // Chunk para React
-                    if (id.includes('node_modules/react/') || 
+                    if (id.includes('node_modules/react/') ||
                         id.includes('node_modules/react-dom/') ||
                         id.includes('node_modules/react-router-dom/')) {
                         return 'react-vendor';
                     }
-                    
                     // Chunk para Supabase
                     if (id.includes('node_modules/@supabase/')) {
                         return 'supabase-vendor';
                     }
-
                     // Chunk para Phaser
                     if (id.includes('node_modules/phaser/') ||
                         id.includes('phaser3-rex-plugins')) {
                         return 'phaser-vendor';
                     }
-
                     // Chunk para UI components
                     if (id.includes('node_modules/@radix-ui/') ||
                         id.includes('node_modules/lucide-react/')) {
                         return 'ui-vendor';
                     }
-
                     // Chunk para utilities
                     if (id.includes('node_modules/zustand/') ||
                         id.includes('node_modules/clsx/') ||
@@ -207,20 +201,19 @@ export default defineConfig({
                         id.includes('node_modules/uuid/')) {
                         return 'utils-vendor';
                     }
-
                     // Features específicas
-                    if (id.includes('/components/mood/') || 
+                    if (id.includes('/components/mood/') ||
                         id.includes('/lib/mood/')) {
                         return 'mood-tracker';
                     }
-
-                    if (id.includes('/components/observatory/') || 
+                    if (id.includes('/components/observatory/') ||
                         id.includes('/scenes/')) {
                         return 'observatory';
                     }
                 },
-                chunkFileNames: (chunkInfo) => {
-                    if (chunkInfo.name?.includes('phaser')) {
+                chunkFileNames: function (chunkInfo) {
+                    var _a;
+                    if ((_a = chunkInfo.name) === null || _a === void 0 ? void 0 : _a.includes('phaser')) {
                         return 'assets/chunks/phaser/[name].[hash].js';
                     }
                     return 'assets/chunks/[name].[hash].js';
@@ -231,7 +224,7 @@ export default defineConfig({
     },
     optimizeDeps: {
         include: [
-            'react', 
+            'react',
             'react-dom',
             'react-router-dom',
             '@supabase/supabase-js'
@@ -245,7 +238,6 @@ export default defineConfig({
         host: true, // Para acceso desde red local
         port: 3000,
     },
-
     // Preview server config para PWA testing
     preview: {
         host: true,

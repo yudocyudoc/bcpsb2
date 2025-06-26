@@ -27,13 +27,14 @@ import React, {
   
   // Interfaz para el perfil que usará la aplicación.
   // Aquí puedes mapear o añadir campos si es necesario.
-  interface AppUserProfile {
+  export interface AppUserProfile {
     id: string;
     email?: string | null; // Lo tomaremos del SupabaseUser
     username: UserProfileFromDB['username'];
     full_name: UserProfileFromDB['full_name'];
     avatar_url: UserProfileFromDB['avatar_url'];
     role: UserProfileFromDB['role'] | 'user'; // Rol con fallback a 'user'
+    show_illustrations: boolean;
   }
   
   // Interfaz para el valor del contexto
@@ -49,6 +50,8 @@ import React, {
     signInWithOAuth: (provider: Provider) => ReturnType<typeof supabase.auth.signInWithOAuth>; // Añadido OAuth
     signOut: () => ReturnType<typeof supabase.auth.signOut>;
     resetPasswordForEmail: (email: string) => ReturnType<typeof supabase.auth.resetPasswordForEmail>; // Añadido
+    setProfile: React.Dispatch<React.SetStateAction<AppUserProfile | null>>; // <-- AÑADE ESTA LÍNEA
+
   }
   
   const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,7 +76,7 @@ import React, {
     try {
       const { data: dbProfile, error } = await supabase // Añadir status para log
         .from('profiles')
-        .select('id, username, full_name, avatar_url, role') // Columnas de tu tabla 'profiles'
+        .select('id, username, full_name, avatar_url, role, show_illustrations') // Columnas de tu tabla 'profiles'
         .eq('id', userId)
         .single(); // Esperamos un solo registro
   
@@ -94,6 +97,7 @@ import React, {
           full_name: dbProfile.full_name,
           avatar_url: dbProfile.avatar_url,
           role: dbProfile.role || 'user', // Fallback si el rol en DB es null
+          show_illustrations: dbProfile.show_illustrations || true, // Asignar valor por defecto
         };
       }
       // Si dbProfile es null (porque error.code fue PGRST116 o no hubo error pero no data)
@@ -105,6 +109,7 @@ import React, {
           full_name: null,
           avatar_url: null,
           role: 'user', // Rol por defecto si no se encuentra perfil en DB
+          show_illustrations: true, // Valor por defecto
       };
   
     } catch (e: unknown) {
@@ -332,6 +337,7 @@ import React, {
       signInWithOAuth,
       signOut,
       resetPasswordForEmail,
+      setProfile: setProfileState,
     };
   
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -344,3 +350,4 @@ import React, {
     }
     return context;
   };
+

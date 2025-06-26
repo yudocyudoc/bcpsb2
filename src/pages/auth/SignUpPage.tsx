@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext.tsx';
-import { Button } from "../../components/ui/button.tsx";
-import { Input } from "../../components/ui/input.tsx";
-import { Label } from "../../components/ui/label.tsx";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card.tsx";
-import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert.tsx";
+import { useAuth } from '../../contexts/AuthContext';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 export function SignUpPage() {
@@ -108,15 +108,15 @@ export function SignUpPage() {
             */}
             <div className="space-y-1.5">
               <Label htmlFor="email-signup">Correo Electrónico</Label>
-              <Input id="email-signup" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input id="email-signup" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password-signup">Contraseña</Label>
-              <Input id="password-signup" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Input id="password-signup" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="confirm-password">Confirmar Contraseña</Label>
-              <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+              <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required autoComplete="new-password" />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Registrando...' : 'Registrarme'}

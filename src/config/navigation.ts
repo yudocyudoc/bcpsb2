@@ -60,7 +60,7 @@ export const adminNavItems: NavItem[] = [
 
 // Navegación para el menú de usuario (Footer)
 export const userNavFooterItems: NavItem[] = [
-    { title: 'Mi Perfil', href: '/profile', icon: Settings }, // Ejemplo
+    { title: 'Mi Perfil', href: '/perfil', icon: Settings }, // Ejemplo
     { title: 'Seguridad', href: '/security', icon: ShieldCheck }, // Ejemplo
     // El item de Logout se manejará directamente en NavUser.tsx
 ];

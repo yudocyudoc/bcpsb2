@@ -1,155 +1,194 @@
 // src/lib/idbService.ts
-import { openDB, type IDBPDatabase, type DBSchema } from 'idb';
-import type { MoodEntry } from '@/types/mood'; // Asegúrate que la ruta a tus tipos sea correcta
+import { openDB, type IDBPDatabase } from 'idb';
+import { v4 as uuidv4 } from 'uuid';
+import type { MoodEntry, MoodEntrySupabaseRow } from '@/types/mood'; // Añadido MoodEntrySupabaseRow
 
-const DB_NAME = 'BCP_MoodTrackerDB'; // Nombre único para tu base de datos
+const DB_NAME = 'moodTrackerDB';
+const DB_VERSION = 2; // Incrementado de 1 a 2
 const STORE_NAME = 'moodEntries';
-const DB_VERSION = 1; // Incrementar si cambias la estructura del store (ej. añades índices)
 
-// Definir el schema de la base de datos para tipado con 'idb'
-interface MoodTrackerDBSchema extends DBSchema {
-  [STORE_NAME]: {
-    key: string; // El keyPath, que será 'localId'
-    value: MoodEntry;
-    indexes: { // Opcional: Definir índices aquí si los necesitas
-      by_userId_createdAt: [string, number]; // Ejemplo: índice compuesto
-      by_syncStatus: string;
-    };
-  };
-}
+let db: IDBPDatabase;
 
-let dbPromise: Promise<IDBPDatabase<MoodTrackerDBSchema>> | null = null;
-
-function getDb(): Promise<IDBPDatabase<MoodTrackerDBSchema>> {
-  if (!dbPromise) {
-    dbPromise = openDB<MoodTrackerDBSchema>(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion, newVersion) {
+async function initDB() {
+  if (!db) {
+    db = await openDB(DB_NAME, DB_VERSION, {
+      upgrade(db, oldVersion, newVersion, _transaction) {
         console.log(`IDB: Upgrading from version ${oldVersion} to ${newVersion}`);
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
+        if (oldVersion < 1) {
+          // Crear store inicial
           const store = db.createObjectStore(STORE_NAME, { keyPath: 'localId' });
-          // Crear índices para búsquedas comunes
-          store.createIndex('by_userId_createdAt', ['userId', 'createdAtClient'], { unique: false });
-          store.createIndex('by_syncStatus', 'syncStatus', { unique: false });
-          console.log(`IDB: Object store "${STORE_NAME}" created with keyPath "localId" and indexes.`);
+          store.createIndex('userId', 'userId');
+          store.createIndex('syncStatus', 'syncStatus');
+          store.createIndex('createdAtClient', 'createdAtClient');
+          store.createIndex('serverId', 'serverId', { unique: false });
         }
-        // Manejar futuras actualizaciones de schema aquí si DB_VERSION cambia
-        // if (oldVersion < 2) { /* migraciones para la v2 */ }
+        
+        if (oldVersion < 2) {
+          // Agregar nuevo índice compuesto
+          const store = _transaction.objectStore(STORE_NAME);
+          if (!store.indexNames.contains('by_userId_createdAt')) {
+            store.createIndex('by_userId_createdAt', ['userId', 'createdAtClient']);
+          }
+        }
       },
       blocked() {
-        console.error('IDB: Database open is blocked. Close other tabs with this app open?');
-        // Esto puede pasar si hay otra pestaña con una conexión a una versión anterior de la BD
-        // y no se cierra. El usuario tendría que cerrar otras pestañas.
-        alert('La base de datos local necesita actualizarse. Por favor, cierra todas las demás pestañas de esta aplicación y recarga.');
+        console.warn('IDB: Database upgrade blocked. Close other tabs with this app.');
       },
       blocking() {
-        console.warn('IDB: Database open is blocking a newer version. Closing connection.');
-        // Esto sucede en la pestaña antigua cuando una nueva pestaña intenta actualizar.
-        // La librería 'idb' intenta manejar esto, pero a veces puede requerir recarga.
+        console.warn('IDB: Database connection blocking.');
       },
       terminated() {
-        console.error('IDB: Connection terminated unexpectedly. The browser might have closed it.');
-        // Restablecer dbPromise para que se intente reconectar en la siguiente llamada a getDb
-        dbPromise = null; 
-      },
+        console.error('IDB: Database connection terminated unexpectedly.');
+      }
     });
   }
-  return dbPromise;
+  return db;
 }
 
-/**
- * Añade o actualiza una entrada de ánimo en IndexedDB.
- * Usa 'put' que inserta si la clave no existe, o actualiza si existe.
- */
-export async function saveMoodEntryLocal(entry: MoodEntry): Promise<string> {
-  const db = await getDb();
-  try {
-    await db.put(STORE_NAME, entry);
-    console.log(`IDB: Entry ${entry.localId} saved/updated locally.`);
-    return entry.localId;
-  } catch (error) {
-    console.error(`IDB: Error saving entry ${entry.localId}:`, error);
-    throw error; // Relanzar para que el llamador lo maneje
-  }
+export async function saveMoodEntryLocal(entry: MoodEntry): Promise<void> {
+  const db = await initDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+
+  // Use .put() to insert or update. If an entry with the same localId exists, it will be updated.
+  await store.put(entry);
+  await tx.done;
+  console.log(`IDB: Entry ${entry.localId} saved/updated locally.`);
 }
 
-/**
- * Obtiene una entrada de ánimo específica por su localId.
- */
-export async function getMoodEntryLocal(localId: string): Promise<MoodEntry | undefined> {
-  const db = await getDb();
-  try {
-    return await db.get(STORE_NAME, localId);
-  } catch (error) {
-    console.error(`IDB: Error fetching entry ${localId}:`, error);
-    throw error;
-  }
-}
-
-/**
- * Obtiene todas las entradas de ánimo de un usuario, ordenadas por fecha de creación descendente, con paginación.
- */
 export async function getUserMoodEntriesLocal(
   userId: string,
-  limit: number = 10, // Número de entradas por página
-  // Para paginación con cursores necesitaríamos guardar un cursor o usar rangos,
-  // por ahora, usaremos un offset simple basado en el número de página o skip.
-  // O, más simple para IndexedDB, cargar todas y paginar en memoria si no son demasiadas.
-  // Para un ejemplo más robusto, cargaríamos por rangos.
-  // Aquí, un ejemplo de cargar todas y ordenar (no ideal para muchísimas entradas):
+  limit: number = 10
 ): Promise<MoodEntry[]> {
   if (!userId) return [];
-  const db = await getDb();
+  const db = await initDB();
+  
   try {
-    // Usar el índice para obtener solo las del usuario y luego ordenar en JS
-    // O si el número de entradas es muy grande, necesitarías rangos en el índice.
-    const allUserEntries = await db.getAllFromIndex(STORE_NAME, 'by_userId_createdAt');
-    // Filtrar por userId (el índice by_userId_createdAt puede no ser exacto para un solo user si no es el primer componente del índice)
-    // Mejorar: si el índice es ['userId', 'createdAtClient'], podemos usar un rango para userId
-    // Por ahora, filtramos en JS, lo cual es menos eficiente para muchísimas entradas pero simple.
-    const userEntries = allUserEntries.filter(entry => entry.userId === userId);
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const index = store.index('by_userId_createdAt');
     
-    // Ordenar descendente por createdAtClient
-    userEntries.sort((a, b) => b.createdAtClient - a.createdAtClient);
+    let cursor = await index.openCursor(
+      IDBKeyRange.bound(
+        [userId, -Infinity],
+        [userId, Infinity]
+      ),
+      'prev' // Orden descendente
+    );
+
+    const entries: MoodEntry[] = [];
+    const uniqueIds = new Set<string>();
+
+    while (cursor && entries.length < limit) {
+      const entry = cursor.value as MoodEntry;
+      const identifier = entry.serverId || entry.localId;
+
+      if (!uniqueIds.has(identifier)) {
+        // Verificar si existe una versión sincronizada
+        if (!entry.serverId && entry.syncStatus === 'pending') {
+          const syncedVersion = await store.index('serverId').get(entry.localId);
+          if (syncedVersion && syncedVersion.serverId) {
+            cursor = await cursor.continue();
+            continue;
+          }
+        }
+
+        entries.push(entry);
+        uniqueIds.add(identifier);
+      }
+      
+      cursor = await cursor.continue();
+    }
     
-    // Aplicar límite (simulando paginación simple)
-    // Para paginación real con IDB, se usarían cursores o IDBKeyRange.
-    // Este es un ejemplo básico que devuelve las 'limit' más recientes.
-    return userEntries.slice(0, limit); // Devolver solo las 'limit' más recientes
+    await tx.done;
+    
+    // Asegurar el orden correcto
+    return entries.sort((a, b) => {
+      // Primero por fecha de creación
+      const dateCompare = b.createdAtClient - a.createdAtClient;
+      if (dateCompare !== 0) return dateCompare;
+      
+      // Si las fechas son iguales, priorizar entradas sincronizadas
+      if (a.syncStatus === 'synced' && b.syncStatus !== 'synced') return -1;
+      if (b.syncStatus === 'synced' && a.syncStatus !== 'synced') return 1;
+      
+      return 0;
+    });
+
   } catch (error) {
     console.error(`IDB: Error fetching entries for user ${userId}:`, error);
     throw error;
   }
 }
 
-
-/**
- * Obtiene todas las entradas pendientes de sincronización.
- */
-export async function getPendingMoodEntriesLocal(): Promise<MoodEntry[]> {
-  const db = await getDb();
-  try {
-    // Esto es más eficiente si tienes un índice en 'syncStatus'
-    const entries = await db.getAllFromIndex(STORE_NAME, 'by_syncStatus', 'pending');
-    // Ordenar por fecha de creación para procesarlas en orden
-    return entries.sort((a, b) => a.createdAtClient - b.createdAtClient);
-  } catch (error) {
-    console.error(`IDB: Error fetching pending entries:`, error);
-    throw error;
-  }
+export async function getPendingMoodEntries(): Promise<MoodEntry[]> {
+  const db = await initDB();
+  const tx = db.transaction(STORE_NAME, 'readonly');
+  const store = tx.objectStore(STORE_NAME);
+  const index = store.index('syncStatus');
+  const pendingEntries = await index.getAll(IDBKeyRange.only('pending'));
+  await tx.done;
+  return pendingEntries;
 }
 
-/**
- * Elimina una entrada de IndexedDB por su localId.
- * Podría usarse después de una sincronización exitosa si no quieres mantenerla localmente,
- * o si el usuario borra una entrada.
- */
-export async function deleteMoodEntryLocal(localId: string): Promise<void> {
-    const db = await getDb();
-    try {
-        await db.delete(STORE_NAME, localId);
-        console.log(`IDB: Entry ${localId} deleted locally.`);
-    } catch (error) {
-        console.error(`IDB: Error deleting entry ${localId}:`, error);
-        throw error;
+// Cambiar la firma de la función para aceptar MoodEntrySupabaseRow en lugar de MoodEntry
+export async function syncSupabaseEntriesToLocal(remoteEntries: MoodEntrySupabaseRow[]): Promise<number> {
+  const db = await initDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+  const serverIdIndex = store.index('serverId');
+  // Eliminada la línea que declara localIdIndex ya que no se usa
+
+  let syncedCount = 0;
+
+  for (const remoteEntry of remoteEntries) {
+    let existingEntry: MoodEntry | undefined;
+
+    // Buscar primero por id de Supabase
+    existingEntry = await serverIdIndex.get(remoteEntry.id);
+
+    if (!existingEntry) {
+      // Convertir entrada remota a formato MoodEntry
+      const entryToSave: MoodEntry = {
+        localId: uuidv4(),
+        serverId: remoteEntry.id,
+        userId: remoteEntry.user_id,
+        suceso: remoteEntry.suceso,
+        selectedContexts: remoteEntry.selected_contexts,
+        emocionesPrincipales: remoteEntry.emociones_principales,
+        subEmociones: remoteEntry.sub_emociones,
+        otrasEmocionesCustom: remoteEntry.otras_emociones_custom,
+        intensidades: remoteEntry.intensidades,
+        pensamientosAutomaticos: remoteEntry.pensamientos_automaticos,
+        creenciasSubyacentes: remoteEntry.creencias_subyacentes,
+        createdAtClient: new Date(remoteEntry.created_at).getTime(),
+        createdAtServer: remoteEntry.created_at,
+        syncStatus: 'synced'
+      };
+      
+      await store.add(entryToSave);
+      syncedCount++;
     }
+  }
+  
+  await tx.done;
+  return syncedCount;
+}
+
+export async function deleteMoodEntryLocal(localId: string): Promise<void> {
+  const db = await initDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+  await store.delete(localId);
+  await tx.done;
+  console.log(`IDB: Entry ${localId} deleted locally.`);
+}
+
+export async function clearAllMoodEntriesLocal(): Promise<void> {
+  const db = await initDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+  await store.clear();
+  await tx.done;
+  console.log('IDB: All mood entries cleared locally.');
 }

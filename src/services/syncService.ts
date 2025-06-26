@@ -1,11 +1,8 @@
 // src/services/syncService.ts
 import { supabase } from '@/supabase/client';
-import { getPendingMoodEntriesLocal, saveMoodEntryLocal } from '@/lib/idbService'; // Ajusta la ruta
-import type { MoodEntrySupabasePayload } from '@/types/mood';
+import { getPendingMoodEntries, saveMoodEntryLocal } from '@/lib/idbService';
+import type { MoodEntrySupabasePayload, MoodEntrySupabaseRow } from '@/types/mood'; // Añadido MoodEntrySupabaseRow
 import { toast } from 'sonner'; // Para notificaciones de sincronización
-//import type { Database } from '@/supabase/database.types';
-
-
 
 // Esta sería la función que se llama desde Supabase para crear la entrada
 // (similar a la que definimos antes, pero ahora su fuente es una entrada local)
@@ -48,7 +45,7 @@ export async function syncPendingMoodEntries(): Promise<{ successCount: number; 
   let errorCount = 0;
 
   try {
-    const pendingEntries = await getPendingMoodEntriesLocal();
+    const pendingEntries = await getPendingMoodEntries();
     if (pendingEntries.length === 0) {
       console.log("SYNC: No pending entries to sync.");
       isSyncing = false;
@@ -153,4 +150,40 @@ export function setupOnlineSyncListener() {
         window.removeEventListener('online', attemptSync);
         window.removeEventListener('offline', attemptSync);
     };
+}
+
+// --- NUEVA FUNCIÓN DE DESCARGA DE REGISTROS HECHOS ---
+
+/**
+ * Obtiene los últimos registros de ánimo de un usuario desde Supabase.
+ * Esta función complementa el sync, permitiendo "hidratar" la caché local
+ * con los datos persistentes de la nube.
+ */
+export async function fetchRecentMoodEntriesFromSupabase(
+  userId: string,
+  limit: number = 20 // Pedimos un número generoso para asegurar que tenemos el historial
+): Promise<MoodEntrySupabaseRow[]> { // Cambiado de MoodEntrySupabasePayload a MoodEntrySupabaseRow
+  // Comprobación de seguridad
+  if (!userId) return [];
+
+  console.log(`[SyncService] Fetching recent ${limit} entries from Supabase for user ${userId}...`);
+  
+  const { data, error } = await supabase
+    .from('mood_entries')
+    .select('*') // Seleccionamos todo para tener la información completa
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false }) // Los más recientes primero
+    .limit(limit);
+
+  if (error) {
+    console.error('[SyncService] Error fetching entries from Supabase:', error);
+    // En caso de error, es mejor devolver un array vacío que romper la aplicación
+    toast.error("No se pudo cargar el historial desde la nube.", {
+      description: "Se mostrarán los registros guardados en este dispositivo."
+    });
+    return []; 
+  }
+  
+  console.log(`[SyncService] Fetched ${data?.length || 0} entries from Supabase.`);
+  return (data as MoodEntrySupabaseRow[]) || []; // Cambiado el tipo del cast
 }

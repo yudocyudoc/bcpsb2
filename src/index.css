@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  font-family: system-ui, Helvetica, Arial, sans-serif;
+  font-family: 'Inter',system-ui, Helvetica, Arial, sans-serif;
   font-display: swap;
   line-height: 1.5;
   font-weight: 400;
@@ -130,4 +130,20 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+
+@layer base {
+  :root {
+    /* ... tus variables de color ... */
+    --background: 340 13% 97%;
+    /* ... etc ... */
+
+    /* --- AÑADIR/MODIFICAR ESTE BLOQUE --- */
+    --font-sans: 'Inter', sans-serif;
+    --font-serif: 'Lora', serif;
+    /* ------------------------------------ */
+  }
+
+  /* ... */
 }

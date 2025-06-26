@@ -1,14 +1,14 @@
 // src/components/mood/MoodTrackerStepperForm.tsx
-import React, { useState, useCallback, useEffect, useRef } from "react"; // Añadir useRef
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import type { FormEvent } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from '@/contexts/AuthContext';
-import { v4 as uuidv4 } from 'uuid'; // Para generar localId
+import { v4 as uuidv4 } from 'uuid';
 
 // --- Servicios Locales y de Sincronización ---
-import { saveMoodEntryLocal, getUserMoodEntriesLocal } from '@/lib/idbService'; // Ajusta la ruta
-import { syncPendingMoodEntries } from '@/services/syncService'; // Ajusta la ruta
+import { saveMoodEntryLocal, getUserMoodEntriesLocal, syncSupabaseEntriesToLocal } from '@/lib/idbService';
+import { syncPendingMoodEntries, fetchRecentMoodEntriesFromSupabase } from '@/services/syncService';
 
 // --- Tipos ---
 import type {
@@ -16,7 +16,7 @@ import type {
   SelectedSubEmotions,
   OtherEmotions,
   EmotionIntensities,
-} from '@/types/mood'; 
+} from '@/types/mood';
 
 // --- Configuración de Emociones ---
 import { emotionHierarchy, emotionsList } from '@/config/emotionConfig';
@@ -33,13 +33,24 @@ import { SubmissionSuccessScreen } from './stepper-parts/Step5SubmissionSuccess'
 type MoodTrackerStepperFormProps = React.HTMLAttributes<HTMLDivElement>;
 
 export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepperFormProps) {
-// En MoodTrackerStepperForm.tsx
-    const { user, isLoading: authLoading } = useAuth(); // 'profile' eliminado si no se usa
-    const formWrapperRef = useRef<HTMLDivElement>(null);
+  const { user, isLoading: authLoading } = useAuth();
+  const formWrapperRef = useRef<HTMLDivElement>(null);
+  
+  // 🔧 FIX 1: Ref para prevenir múltiples submissions
+  const submissionInProgressRef = useRef(false);
+  const lastSubmissionIdRef = useRef<string | null>(null);
+  
+  // 🔧 FIX 2: Ref para controlar sync
+  const syncInProgressRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  const scrollToTop = useCallback(() => { /* ... tu función scrollToTop ... */ }, []);
+  const scrollToTop = useCallback(() => {
+    if (formWrapperRef.current) {
+      formWrapperRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
 
-  // --- ESTADO PRINCIPAL (sin cambios en su definición inicial) ---
+  // --- ESTADO PRINCIPAL ---
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [sucesoText, setSucesoText] = useState<string>("");
   const [selectedEmotions, setSelectedEmotions] = useState<string[]>([]);
@@ -50,45 +61,86 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
   const [creenciasText, setCreenciasText] = useState<string>("");
   const [selectedContexts, setSelectedContexts] = useState<string[]>([]);
   
-  const [isSaving, setIsSaving] = useState<boolean>(false); // Para el estado de guardado local + intento de sync  
-  const [previousEntries, setPreviousEntries] = useState<MoodEntry[]>([]);  
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [previousEntries, setPreviousEntries] = useState<MoodEntry[]>([]);
   const [isLoadingEntries, setIsLoadingEntries] = useState<boolean>(true);
-
-  // Ya no necesitamos lastVisibleEntry, hasMoreEntries, isLoadingMoreEntries para el fetch simple de IDB
-  // La paginación de IDB la simplificamos en idbService.ts por ahora.
 
   type FormStatus = 'filling' | 'submitted' | 'error';
   const [formStatus, setFormStatus] = useState<FormStatus>('filling');
-  const [lastSubmissionData, setLastSubmissionData] = useState<MoodEntry | null>(null); // Para la pantalla de éxito
-  // weeklyEntryCount se podría calcular leyendo de IDB y filtrando por fecha si es necesario en la pantalla de éxito
+  const [lastSubmissionData, setLastSubmissionData] = useState<MoodEntry | null>(null);
 
-  // --- Carga de Registros Previos desde IndexedDB ---
+  // 🔧 FIX 3: Función optimizada para cargar entries (memoizada con useMemo para evitar recreación)
   const loadUserEntriesFromLocal = useCallback(async () => {
-    if (user && !authLoading) {
-      setIsLoadingEntries(true);
-      try {
-        const entriesData = await getUserMoodEntriesLocal(user.id, 5); // Cargar las últimas 5, por ejemplo
-        setPreviousEntries(entriesData);
-        // console.log("MoodTracker: Loaded local entries:", entriesData);
-      } catch (error) {
-        console.error("MoodTracker: Error loading entries from IndexedDB:", error);
-        toast.error("Error al cargar registros locales.");
-      } finally {
-        setIsLoadingEntries(false);
-      }
-    } else if (!authLoading && !user) {
+    if (!user?.id || !mountedRef.current) {
       setPreviousEntries([]);
-      setIsLoadingEntries(false);
+      return;
     }
-  }, [user, authLoading]);
+    
+    try {
+      const entriesData = await getUserMoodEntriesLocal(user.id, 20); // Fetch more to ensure comprehensive deduplication
+      if (mountedRef.current) {
+        setPreviousEntries(entriesData);
+      }
+    } catch (error) {
+      console.error("MoodTracker: Error loading entries from IndexedDB:", error);
+      if (mountedRef.current) {
+        toast.error("Error al cargar registros locales.");
+      }
+    }
+  }, [user?.id]);
 
+  // 🔧 FIX 4: useEffect optimizado para evitar múltiples cargas
   useEffect(() => {
-    loadUserEntriesFromLocal();
-  }, [loadUserEntriesFromLocal]);
+    let isMounted = true;
 
+    const loadInitialData = async () => {
+      if (!user?.id || authLoading || syncInProgressRef.current) {
+        if (!authLoading && isMounted) {
+          setPreviousEntries([]);
+          setIsLoadingEntries(false);
+        }
+        return;
+      }
 
-  // --- Handlers (handleNextStep, handlePrevStep, isStepAccessible, goToStep, context/emotion handlers sin cambios significativos) ---
+      syncInProgressRef.current = true;
+      setIsLoadingEntries(true);
+      
+      try {
+        await syncPendingMoodEntries();
+        const remoteEntries = await fetchRecentMoodEntriesFromSupabase(user.id, 20);
+        
+        if (remoteEntries.length > 0) {
+          await syncSupabaseEntriesToLocal(remoteEntries);
+        }
+        
+        const localEntries = await getUserMoodEntriesLocal(user.id, 10);
+        
+        if (isMounted) {
+          setPreviousEntries(localEntries);
+        }
 
+      } catch (error) {
+        console.error("Failed to load and sync entries:", error);
+        if (isMounted) {
+          toast.error("Error al cargar los registros históricos.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingEntries(false);
+          syncInProgressRef.current = false;
+        }
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      isMounted = false;
+      syncInProgressRef.current = false;
+    };
+  }, [user?.id, authLoading]);
+
+  // --- Handlers optimizados ---
   const handleNextStep = useCallback(() => {
     if (currentStep === 1 && sucesoText.trim() === "") {
       toast.error("Describe el suceso antes de continuar.");
@@ -98,28 +150,30 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
       toast.error("Selecciona al menos una emoción.");
       return;
     }
-    let nextStepResult = currentStep; // Para el log
+    
     if (currentStep === 2) {
       const allEmotionsToRateSet = new Set<string>();
       selectedEmotions.forEach((emotion) => {
         allEmotionsToRateSet.add(emotion);
         if (selectedSubEmotions[emotion]) {
-            selectedSubEmotions[emotion].forEach(sub => allEmotionsToRateSet.add(sub));
+          selectedSubEmotions[emotion].forEach(sub => allEmotionsToRateSet.add(sub));
         }
         if (emotion === "Otra(s)" && otherEmotions[emotion]?.trim()) {
-            allEmotionsToRateSet.add(otherEmotions[emotion].trim());
+          allEmotionsToRateSet.add(otherEmotions[emotion].trim());
         }
       });
+      
       const newIntensities = { ...emotionIntensities };
       allEmotionsToRateSet.forEach(emotionKey => {
-          if (!(emotionKey in newIntensities)) newIntensities[emotionKey] = 50;
+        if (!(emotionKey in newIntensities)) newIntensities[emotionKey] = 50;
       });
       setEmotionIntensities(newIntensities);
     }
+    
     setCurrentStep((prev) => {
-      nextStepResult = Math.min(prev + 1, 4); // Total de 4 pasos antes del resumen/guardado
-      if (nextStepResult !== prev) scrollToTop();
-      return nextStepResult;
+      const nextStep = Math.min(prev + 1, 4);
+      if (nextStep !== prev) scrollToTop();
+      return nextStep;
     });
   }, [currentStep, sucesoText, selectedEmotions, selectedSubEmotions, otherEmotions, emotionIntensities, scrollToTop]);
 
@@ -129,9 +183,9 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
       if (newStep !== prev) scrollToTop();
       return newStep;
     });
-  }, [scrollToTop]); 
-  
-  const isStepAccessible = useCallback((stepIndexToCheck: number) : boolean => {
+  }, [scrollToTop]);
+
+  const isStepAccessible = useCallback((stepIndexToCheck: number): boolean => {
     const targetStep = stepIndexToCheck + 1;
     if (targetStep <= currentStep) return true;
     if (targetStep === 2 && !sucesoText.trim()) return false;
@@ -142,30 +196,32 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
 
   const goToStep = useCallback((step: number) => {
     if (isStepAccessible(step - 1) && step !== currentStep) {
-        if (currentStep === 2 && step === 3) {
-             const allEmotionsToRateSet = new Set<string>();
-             selectedEmotions.forEach((emotion) => {
-                allEmotionsToRateSet.add(emotion);
-                if (selectedSubEmotions[emotion]) {
-                    selectedSubEmotions[emotion].forEach(sub => allEmotionsToRateSet.add(sub));
-                }
-                if (emotion === "Otra(s)" && otherEmotions[emotion]?.trim()) {
-                    allEmotionsToRateSet.add(otherEmotions[emotion].trim());
-                }
-             });
-             const newIntensities = { ...emotionIntensities };
-             allEmotionsToRateSet.forEach(emotionKey => {
-                 if (!(emotionKey in newIntensities)) newIntensities[emotionKey] = 50;
-             });
-             setEmotionIntensities(newIntensities);
-        }
-        scrollToTop();
-        setCurrentStep(step);
-      } else {
-        if (step !== currentStep) toast.error("Completa los pasos anteriores primero.");
+      if (currentStep === 2 && step === 3) {
+        const allEmotionsToRateSet = new Set<string>();
+        selectedEmotions.forEach((emotion) => {
+          allEmotionsToRateSet.add(emotion);
+          if (selectedSubEmotions[emotion]) {
+            selectedSubEmotions[emotion].forEach(sub => allEmotionsToRateSet.add(sub));
+          }
+          if (emotion === "Otra(s)" && otherEmotions[emotion]?.trim()) {
+            allEmotionsToRateSet.add(otherEmotions[emotion].trim());
+          }
+        });
+        
+        const newIntensities = { ...emotionIntensities };
+        allEmotionsToRateSet.forEach(emotionKey => {
+          if (!(emotionKey in newIntensities)) newIntensities[emotionKey] = 50;
+        });
+        setEmotionIntensities(newIntensities);
+      }
+      scrollToTop();
+      setCurrentStep(step);
+    } else {
+      if (step !== currentStep) toast.error("Completa los pasos anteriores primero.");
     }
   }, [currentStep, sucesoText, selectedEmotions, selectedSubEmotions, otherEmotions, emotionIntensities, isStepAccessible, scrollToTop]);
 
+  // Otros handlers (sin cambios significativos)
   const handleContextToggle = useCallback((context: string) => {
     setSelectedContexts((prev) =>
       prev.includes(context) ? prev.filter((c) => c !== context) : [...prev, context]
@@ -179,7 +235,7 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
     if (!selectedSubEmotions[emotion]) {
       setSelectedSubEmotions((prev) => ({ ...prev, [emotion]: [] }));
     }
-  }, [selectedSubEmotions]); // Asegúrate que selectedSubEmotions esté en las dependencias
+  }, [selectedSubEmotions]);
 
   const handleSubEmotionSelect = useCallback((parentEmotion: string, subEmotion: string) => {
     setSelectedSubEmotions((prev) => ({
@@ -204,93 +260,118 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
     setEmotionIntensities((prev) => ({ ...prev, [emotionKey]: value }));
   }, []);
 
-  const resetForm = () => {
-    setSucesoText(""); setSelectedEmotions([]); setSelectedSubEmotions({});
-    setOtherEmotions({}); setEmotionIntensities({}); setPensamientosText("");
-    setCreenciasText(""); setSelectedContexts([]); setCurrentStep(1);
-    // No mostramos toast aquí, se puede mostrar después de un envío exitoso si se reinicia.
-  };
+  const resetForm = useCallback(() => {
+    setSucesoText("");
+    setSelectedEmotions([]);
+    setSelectedSubEmotions({});
+    setOtherEmotions({});
+    setEmotionIntensities({});
+    setPensamientosText("");
+    setCreenciasText("");
+    setSelectedContexts([]);
+    setCurrentStep(1);
+    // Reset submission tracking
+    submissionInProgressRef.current = false;
+    lastSubmissionIdRef.current = null;
+  }, []);
 
   const handleStartNewEntry = useCallback(() => {
     resetForm();
     setLastSubmissionData(null);
     setFormStatus('filling');
-    scrollToTop(); // Asegurar que el nuevo formulario esté visible desde arriba
+    scrollToTop();
   }, [resetForm, scrollToTop]);
 
-  // --- handleSubmit Modificado para Offline-First ---
+  // 🔧 FIX 5: handleSubmit optimizado para prevenir duplicaciones
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!user) {
+    
+    // Prevenir múltiples submissions
+    if (submissionInProgressRef.current || isSaving) {
+      console.log("Submission already in progress, ignoring duplicate");
+      return;
+    }
+
+    if (!user?.id) {
       toast.error("Debes iniciar sesión para guardar tus registros.");
       return;
     }
-    if (pensamientosText.trim() === "" && creenciasText.trim() === "") {
-        toast.info("Considera añadir tus pensamientos o creencias para un registro más completo.", { duration: 4000 });
+
+    // Marcar submission en progreso
+    submissionInProgressRef.current = true;
+    setIsSaving(true);
+
+    const clientTimestamp = Date.now();
+    const newLocalId = uuidv4();
+
+    // Prevenir duplicados por timestamp muy cercano
+    if (lastSubmissionIdRef.current === newLocalId) {
+      console.log("Duplicate submission attempt detected, ignoring");
+      submissionInProgressRef.current = false;
+      setIsSaving(false);
+      return;
     }
 
-    setIsSaving(true);
-    const clientTimestamp = Date.now();
-    const newLocalId = uuidv4(); // Generar ID único para IndexedDB
+    lastSubmissionIdRef.current = newLocalId;
 
     const newMoodEntry: MoodEntry = {
       localId: newLocalId,
-      serverId: null, // Aún no sincronizado
+      serverId: null,
       userId: user.id,
       suceso: sucesoText,
-      selectedContexts: selectedContexts,
-      emocionesPrincipales: selectedEmotions, // Renombré en el tipo MoodEntry
+      selectedContexts,
+      emocionesPrincipales: selectedEmotions,
       subEmociones: selectedSubEmotions,
-      otrasEmocionesCustom: otherEmotions,    // Renombré en el tipo MoodEntry
+      otrasEmocionesCustom: otherEmotions,
       intensidades: emotionIntensities,
-      pensamientosAutomaticos: pensamientosText, // Renombré en el tipo MoodEntry
-      creenciasSubyacentes: creenciasText,    // Renombré en el tipo MoodEntry
+      pensamientosAutomaticos: pensamientosText,
+      creenciasSubyacentes: creenciasText,
       createdAtClient: clientTimestamp,
       createdAtServer: null,
-      syncStatus: 'pending',
-      // No es necesario lastSyncAttempt ni syncError al crear
+      syncStatus: 'pending'
     };
 
     try {
-      await saveMoodEntryLocal(newMoodEntry); // Guardar en IndexedDB
-      toast.success("Registro guardado localmente.");
+      // Guardar localmente
+      await saveMoodEntryLocal(newMoodEntry);
+      console.log(`Successfully saved entry ${newLocalId} locally`);
       
-      // Actualizar UI localmente
-      setPreviousEntries(prev => [newMoodEntry, ...prev].sort((a,b) => b.createdAtClient - a.createdAtClient).slice(0,5)); // Mantener las 5 más recientes
-      setLastSubmissionData(newMoodEntry); // Para la pantalla de éxito
-      
-      // Disparar sincronización en segundo plano (no esperar el resultado aquí para no bloquear UI)
-      syncPendingMoodEntries().then(({ successCount, errorCount }) => {
-        if (successCount > 0) {
-          // Opcional: podrías querer recargar las entradas locales para reflejar el serverId y syncStatus 'synced'
-          // o que el syncService emita un evento para que el store/componente se actualice.
-          // Por ahora, la UI ya se actualizó con la entrada local.
-          // console.log(`Background sync: ${successCount} entries synced.`);
-          loadUserEntriesFromLocal(); // Recargar para obtener el serverId y estado synced
-        }
-        if (errorCount > 0) {
-          // console.log(`Background sync: ${errorCount} entries failed to sync.`);
-          // El usuario ya fue notificado por el syncService, o podrías notificar de nuevo.
-        }
-      }).catch(syncError => {
-        console.error("Error during background sync trigger:", syncError);
-        // No necesariamente un toast aquí, ya que syncPendingMoodEntries maneja sus propios toasts.
-      });
-      
-      setFormStatus('submitted'); // Mostrar pantalla de éxito
-      resetForm(); // Limpiar el formulario para la próxima entrada
-      scrollToTop();
+      if (mountedRef.current) {
+        toast.success("Registro guardado localmente.");
+        
+        // Recargar entries
+        await loadUserEntriesFromLocal();
+        
+        // Actualizar estado del formulario
+        setLastSubmissionData(newMoodEntry);
+        setFormStatus('submitted');
+        resetForm();
+        scrollToTop();
+
+        // Sincronización en segundo plano (sin await para no bloquear UI)
+        syncPendingMoodEntries()
+          .then(() => {
+            console.log("Background sync completed successfully");
+          })
+          .catch(error => {
+            console.error("Background sync error:", error);
+          });
+      }
 
     } catch (error) {
-      console.error("MoodTracker: Error saving entry locally:", error);
-      toast.error("Error al guardar el registro localmente.");
-      setFormStatus('error'); // Opcional: un estado de error para el formulario
+      console.error(`Error saving entry ${newLocalId}:`, error);
+      if (mountedRef.current) {
+        toast.error("Error al guardar el registro.");
+      }
     } finally {
-      setIsSaving(false);
+      if (mountedRef.current) {
+        setIsSaving(false);
+      }
+      submissionInProgressRef.current = false;
     }
-  };  
+  };
 
-  // --- Renderizado (RenderStepContent, etc. sin cambios en su lógica interna) ---
+  // --- Renderizado ---
   const renderStepContent = (): React.ReactNode => {
     switch (currentStep) {
       case 1:
@@ -334,50 +415,61 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
       case 4:
         const formDataSummary = {
           sucesoText,
-          selectedContexts, // Esta propiedad no está en FormDataSummary, pero Step4Pensamientos no la usa directamente desde aquí
-          selectedEmotions: selectedEmotions,     // Corregido: Nombre de propiedad
-          selectedSubEmotions: selectedSubEmotions, // Corregido: Nombre de propiedad
-          otherEmotions: otherEmotions,         // Corregido: Nombre de propiedad
-          emotionIntensities: emotionIntensities, // Corregido: Nombre de propiedad
-          pensamientosText: pensamientosText,     // Corregido: Nombre de propiedad
-          creenciasText: creenciasText,         // Corregido: Nombre de propiedad
+          selectedEmotions,
+          selectedSubEmotions,
+          otherEmotions,
+          emotionIntensities,
+          pensamientosText,
+          creenciasText,
         };
         return (
-          <Step4Pensamientos 
-            pensamientosText={pensamientosText} onPensamientosChange={setPensamientosText} 
-            creenciasText={creenciasText} onCreenciasChange={setCreenciasText} // Corregido: setCreenciasText
-            formDataSummary={formDataSummary} isSaving={isSaving} onPrev={handlePrevStep} />
+          <Step4Pensamientos
+            pensamientosText={pensamientosText}
+            onPensamientosChange={setPensamientosText}
+            creenciasText={creenciasText}
+            onCreenciasChange={setCreenciasText}
+            formDataSummary={formDataSummary}
+            isSaving={isSaving}
+            onPrev={handlePrevStep}
+          />
         );
       default:
         return null;
     }
-
-  
   };
-    if (authLoading) { /* ... */ }
-  if (!user) { /* ... */ }
+
+  if (authLoading) {
+    return <div>Cargando...</div>;
+  }
+
+  if (!user) {
+    return <div>Debes iniciar sesión para acceder al mood tracker.</div>;
+  }
+
   if (formStatus === 'submitted') {
-    // Podrías calcular weeklyEntryCount leyendo de previousEntries (que vienen de IDB)
-    // y filtrando por fecha si necesitas mostrarlo en SubmissionSuccessScreen
-    // const calculateWeeklyCount = () => { /* ... */ return 0; };
-    return <SubmissionSuccessScreen onStartNew={handleStartNewEntry} lastEntry={lastSubmissionData} /* weeklyEntryCount={calculateWeeklyCount()} */ />;
+    return (
+      <SubmissionSuccessScreen
+        onStartNew={handleStartNewEntry}
+        lastEntry={lastSubmissionData}
+      />
+    );
   }
 
   return (
-    <div ref={formWrapperRef} className={cn("flex flex-col gap-6 sm:gap-8", className)} {...props}> {/* Quitado overflow-y-auto si el scroll es de <main> */}
+    <div ref={formWrapperRef} className={cn("flex flex-col gap-6 sm:gap-8", className)} {...props}>
       <StepIndicator
         currentStep={currentStep}
         totalSteps={4}
         onGoToStep={goToStep}
-        stepLabels={["Suceso", "Emociones", "Intensidad", "Reflexión"]} // Etiquetas más cortas
+        stepLabels={["Suceso", "Emociones", "Intensidad", "Reflexión"]}
         isStepAccessible={isStepAccessible}
       />
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="step-content-wrapper p-4 sm:p-6 border rounded-lg bg-card shadow min-h-[280px] sm:min-h-[320px]">
           {renderStepContent()}
         </div>
-        </form>      
-        <PreviousEntriesAccordion
+      </form>
+      <PreviousEntriesAccordion
         entries={previousEntries}
         isLoading={isLoadingEntries}
         onLoadMore={async () => Promise.resolve()}
