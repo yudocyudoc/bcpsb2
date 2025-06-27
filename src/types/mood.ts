@@ -1,16 +1,19 @@
-// src/types/mood.ts 
+// src/types/mood.ts
 
-// Tipos para la estructura interna de emociones
+import { Json } from '@/types/supabase';
+
+// --- Tipos base para la estructura de datos ---
 export interface SelectedSubEmotions { [key: string]: string[]; }
 export interface OtherEmotions { [key:string]: string; }
 export interface EmotionIntensities { [key: string]: number; }
 
-// Interfaz para una entrada en el frontend/IndexedDB
+// --- TIPO #1: La representación en el Frontend y en IndexedDB (camelCase) ---
+// Este es el tipo que usan tus componentes de React.
 export interface MoodEntry {
   localId: string;
   serverId: string | null;
   userId: string;
-  suceso: string;
+  suceso: string | null; // Permite null
   selectedContexts: string[] | null;
   emocionesPrincipales: string[] | null;
   subEmociones: SelectedSubEmotions | null;
@@ -23,38 +26,38 @@ export interface MoodEntry {
   syncStatus: 'pending' | 'syncing' | 'synced' | 'error';
   lastSyncAttempt?: number;
   syncError?: string | null;
-  planet_image_url?: string | null; // Preparado para el futuro
+  planet_image_url?: string | null;
+  embedding?: number[] | null;  // Frontend siempre usa number[]
 }
 
-// Tipo para el payload que se envía a Supabase al CREAR una nueva entrada.
-// No incluye id, created_at, etc. porque son generados por la BD.
-export interface MoodEntrySupabaseInsert {
-    user_id: string;
-    suceso: string;
-    selected_contexts: string[] | null;
-    emociones_principales: string[] | null;
-    sub_emociones: SelectedSubEmotions | null;
-    otras_emociones_custom: OtherEmotions | null;
-    intensidades: EmotionIntensities | null;
-    pensamientos_automaticos: string | null;
-    creencias_subyacentes: string | null;
-}
-
-// --- Tipos para la interacción con Supabase ---
-
-// Asegurarnos que los tipos estén bien definidos
+// --- TIPO #2: Una fila COMPLETA como viene de Supabase (snake_case) ---
+// Este tipo representa lo que devuelve un `SELECT *`.
 export interface MoodEntrySupabaseRow {
   id: string;
   created_at: string;
   user_id: string;
-  suceso: string;
+  suceso: string | null;
   selected_contexts: string[] | null;
   emociones_principales: string[] | null;
-  sub_emociones: SelectedSubEmotions | null;
-  otras_emociones_custom: OtherEmotions | null;
-  intensidades: EmotionIntensities | null;
+  sub_emociones: unknown; // 'unknown' es más seguro para jsonb
+  otras_emociones_custom: unknown;
+  intensidades: unknown;
   pensamientos_automaticos: string | null;
   creencias_subyacentes: string | null;
+  embedding: string | null;
+  planet_image_url: string | null;
 }
 
-export type MoodEntrySupabasePayload = Omit<MoodEntrySupabaseRow, 'id' | 'created_at'>;
+// --- TIPO #3: El payload para INSERTAR en Supabase ---
+// Se deriva del tipo anterior, pero quitando los campos que genera la base de datos.
+export interface MoodEntrySupabaseInsert {
+  user_id: string;
+  suceso: string;  // Cambiado de string | null a string
+  selected_contexts: string[];
+  emociones_principales: string[];
+  sub_emociones: Json;
+  otras_emociones_custom: Json;
+  intensidades: Json;
+  pensamientos_automaticos: string;
+  creencias_subyacentes: string;
+}

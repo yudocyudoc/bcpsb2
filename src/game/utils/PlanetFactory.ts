@@ -20,7 +20,11 @@ export class PlanetFactory {
 
   constructor(scene: Scene) {
     this.scene = scene;
+  
+  
   }
+
+  
 
   createPlanet(x: number, y: number, radius: number, type: PlanetType): GameObjects.Container {
     const container = this.scene.add.container(x, y);
@@ -469,5 +473,40 @@ export class PlanetFactory {
     const types = Object.values(PlanetType);
     const randomType = types[Math.floor(Math.random() * types.length)] as PlanetType;
     return this.createPlanet(x, y, radius, randomType);
+  }
+
+  public createPlanetFromEmbedding(
+    x: number, 
+    y: number, 
+    radius: number, 
+    embedding: number[] | null
+  ): GameObjects.Container {
+    
+    const container = this.scene.add.container(x, y);
+
+    // Si no hay embedding, dibujamos un planeta por defecto
+    if (!embedding || embedding.length === 0) {
+      return this.createBasicPlanet(container, radius);
+    }
+    
+    // Mapeamos el primer valor del embedding a un tono de gris
+    const grayValue = Math.floor(((embedding[0] + 1) / 2) * 255);
+    const planetColor = Phaser.Display.Color.GetColor(grayValue, grayValue, grayValue);
+    
+    // Mapeamos el segundo valor al radio
+    const planetRadius = radius * (1 + (embedding[1] * 0.5));
+    
+    const planet = this.scene.add.circle(0, 0, planetRadius, planetColor);
+    container.add(planet);
+
+    // Añadimos una atmósfera cuyo color depende del tercer valor del embedding
+    if (embedding[2] > 0) {
+      const atmosphereColor = Phaser.Display.Color.GetColor(100, 100, Math.floor(((embedding[2] + 1) / 2) * 255));
+      const atmosphere = this.scene.add.circle(0, 0, planetRadius * 1.2, atmosphereColor, 0.3);
+      atmosphere.setBlendMode(Phaser.BlendModes.ADD);
+      container.add(atmosphere);
+    }
+
+    return container;
   }
 }

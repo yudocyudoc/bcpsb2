@@ -1,6 +1,5 @@
 // src/lib/idbService.ts
 import { openDB, type IDBPDatabase } from 'idb';
-import { v4 as uuidv4 } from 'uuid';
 import type { MoodEntry, MoodEntrySupabaseRow } from '@/types/mood'; // Añadido MoodEntrySupabaseRow
 
 const DB_NAME = 'moodTrackerDB';
@@ -136,43 +135,34 @@ export async function syncSupabaseEntriesToLocal(remoteEntries: MoodEntrySupabas
   const db = await initDB();
   const tx = db.transaction(STORE_NAME, 'readwrite');
   const store = tx.objectStore(STORE_NAME);
-  const serverIdIndex = store.index('serverId');
-  // Eliminada la línea que declara localIdIndex ya que no se usa
-
-  let syncedCount = 0;
-
-  for (const remoteEntry of remoteEntries) {
-    let existingEntry: MoodEntry | undefined;
-
-    // Buscar primero por id de Supabase
-    existingEntry = await serverIdIndex.get(remoteEntry.id);
-
-    if (!existingEntry) {
-      // Convertir entrada remota a formato MoodEntry
-      const entryToSave: MoodEntry = {
-        localId: uuidv4(),
-        serverId: remoteEntry.id,
-        userId: remoteEntry.user_id,
-        suceso: remoteEntry.suceso,
-        selectedContexts: remoteEntry.selected_contexts,
-        emocionesPrincipales: remoteEntry.emociones_principales,
-        subEmociones: remoteEntry.sub_emociones,
-        otrasEmocionesCustom: remoteEntry.otras_emociones_custom,
-        intensidades: remoteEntry.intensidades,
-        pensamientosAutomaticos: remoteEntry.pensamientos_automaticos,
-        creenciasSubyacentes: remoteEntry.creencias_subyacentes,
-        createdAtClient: new Date(remoteEntry.created_at).getTime(),
-        createdAtServer: remoteEntry.created_at,
-        syncStatus: 'synced'
-      };
-      
-      await store.add(entryToSave);
-      syncedCount++;
-    }
-  }
   
+  const promises = remoteEntries.map(async remoteEntry => {
+    const entryToSave: MoodEntry = {
+      localId: remoteEntry.id, // Cambiado de uuidv4() a usar el id del servidor
+      serverId: remoteEntry.id,
+      userId: remoteEntry.user_id,
+      suceso: remoteEntry.suceso,
+      selectedContexts: remoteEntry.selected_contexts || [],
+      emocionesPrincipales: remoteEntry.emociones_principales || [],
+      subEmociones: (remoteEntry.sub_emociones as any) || {},
+      otrasEmocionesCustom: (remoteEntry.otras_emociones_custom as any) || {},
+      intensidades: (remoteEntry.intensidades as any) || {},
+      pensamientosAutomaticos: remoteEntry.pensamientos_automaticos || '',
+      creenciasSubyacentes: remoteEntry.creencias_subyacentes || '',
+      createdAtClient: new Date(remoteEntry.created_at).getTime(),
+      createdAtServer: remoteEntry.created_at,
+      syncStatus: 'synced',
+      embedding: remoteEntry.embedding ? JSON.parse(remoteEntry.embedding) : null,
+      planet_image_url: remoteEntry.planet_image_url
+    };
+    
+    return store.put(entryToSave);
+  });
+
+  await Promise.all(promises);
   await tx.done;
-  return syncedCount;
+  
+  return promises.length;
 }
 
 export async function deleteMoodEntryLocal(localId: string): Promise<void> {
