@@ -4,8 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getWeeklyJourney, type MoodEntryWithEmbedding } from '@/services/observatoryService';
 import { PhaserGame } from '@/components/observatory/PhaserGame';
 import { Loader2, Telescope, Sparkles, Calendar, AlertCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { PlanetDetailCard, type ReflectionData } from '@/components/observatory/PlanetDetailCard';
 import StarsBackground from '@/components/observatory/StarsBackground'; // Asegúrate de que la ruta sea correcta
 
 // --- COMPONENTE DE LAYOUT INTERNO ---
@@ -95,6 +96,17 @@ export function ObservatoryPage() {
     setSelectedEntry(entry);
   };
 
+  const handleSaveReflection = async (data: ReflectionData) => {
+    console.log('[ObservatoryPage] Saving reflection:', data);
+    // Aquí es donde llamarías a tu servicio para guardar los datos en la base de datos.
+    // Por ejemplo: const { error } = await supabase.from('reflections').insert(data);
+    
+    // Después de guardar, podrías querer recargar los datos o simplemente cerrar el modal.
+    // Por ahora, solo simulamos que se guarda y no hacemos nada más.
+    // En un caso real, querrías manejar el estado de carga y los errores aquí también.
+    return Promise.resolve();
+  };
+
   // --- RENDERIZADO DE ESTADOS ---
 
   // 1. Estado de Carga
@@ -178,24 +190,12 @@ export function ObservatoryPage() {
 
       {/* Modal de reflexión (placeholder por ahora) */}
       {selectedEntry && (
-        <div 
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-30 flex items-center justify-center p-4"
-            onClick={() => setSelectedEntry(null)} // Cierra el modal al hacer clic en el fondo
-        >
-          <Card 
-              className="max-w-2xl w-full bg-slate-900 border-slate-800"
-              onClick={(e) => e.stopPropagation()} // Evita que el clic en la tarjeta cierre el modal
-          >
-            <CardHeader>
-                <CardTitle className="text-slate-200">Bitácora del Planeta {selectedEntry.id.slice(0, 8).toUpperCase()}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-slate-400">
-                Aquí irán los detalles del registro y la pregunta de reflexión.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <PlanetDetailCard
+          moodEntry={selectedEntry}
+          isVisible={!!selectedEntry}
+          onClose={() => setSelectedEntry(null)}
+          onSaveReflection={handleSaveReflection}
+        />
       )}
     </div>
   );
