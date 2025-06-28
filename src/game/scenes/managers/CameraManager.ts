@@ -4,7 +4,6 @@ import { Scene, GameObjects } from 'phaser';
 enum ZoomState {
   OVERVIEW = 'overview',
   FOCUSED = 'focused',
-  CLOSEUP = 'closeup'
 }
 
 export class CameraManager {
@@ -13,11 +12,10 @@ export class CameraManager {
   private currentZoomState: ZoomState = ZoomState.OVERVIEW;
   private isTransitioning: boolean = false;
   
-  // Configuración contemplativa
-  private readonly TRANSITION_DURATION = 2500; // 2.5 segundos
-  private readonly OVERVIEW_ZOOM = 0.8;
+  // 🔧 Configuración MÁS CONSERVADORA
+  private readonly TRANSITION_DURATION = 2500;
+  private readonly OVERVIEW_ZOOM = 0.8; // Volver al original que funcionaba
   private readonly FOCUSED_ZOOM = 1.5;
-  private readonly CLOSEUP_ZOOM = 2.5;
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -27,10 +25,12 @@ export class CameraManager {
   public startOpeningSequence() {
     console.log('[CameraManager] Starting contemplative opening sequence...');
     
-    // Comenzar con zoom muy lejano
-    this.camera.setZoom(0.3);
+    // 🔧 CORRECCIÓN: Comenzar más cerca para ver los planetas inmediatamente
+    this.camera.setZoom(0.5); // Zoom inicial conservador
     
-    // Transición contemplativa a vista overview
+    // 🔧 CORRECCIÓN: Asegurar que la cámara esté centrada en el origen
+    this.camera.centerOn(0, 0);
+    
     this.scene.tweens.add({
       targets: this.camera,
       zoom: this.OVERVIEW_ZOOM,
@@ -50,7 +50,6 @@ export class CameraManager {
     
     this.isTransitioning = true;
     
-    // Transición contemplativa hacia el planeta
     this.scene.tweens.add({
       targets: this.camera,
       scrollX: planetContainer.x - this.camera.width / 2,
@@ -76,7 +75,7 @@ export class CameraManager {
     
     this.isTransitioning = true;
     
-    // Transición contemplativa de vuelta a overview
+    // 🔧 CORRECCIÓN: Asegurar que volvemos al centro (0,0)
     this.scene.tweens.add({
       targets: this.camera,
       scrollX: 0,
@@ -88,6 +87,9 @@ export class CameraManager {
         this.currentZoomState = ZoomState.OVERVIEW;
         this.isTransitioning = false;
         
+        // 🔧 CORRECCIÓN: Re-centrar explícitamente
+        this.camera.centerOn(0, 0);
+        
         if (onComplete) {
           onComplete();
         }
@@ -96,11 +98,10 @@ export class CameraManager {
   }
 
   public handleZoom(deltaY: number) {
-    // Solo permitir zoom en vista overview y si no estamos en transición
     if (this.isTransitioning || this.currentZoomState !== ZoomState.OVERVIEW) return;
     
     const zoomFactor = deltaY > 0 ? 0.95 : 1.05;
-    const newZoom = Phaser.Math.Clamp(this.camera.zoom * zoomFactor, 0.5, 1.5);
+    const newZoom = Phaser.Math.Clamp(this.camera.zoom * zoomFactor, 0.7, 2.0);
     
     this.scene.tweens.add({
       targets: this.camera,

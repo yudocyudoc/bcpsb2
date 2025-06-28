@@ -14,17 +14,12 @@ export const PlanetType = {
 } as const;
 export type PlanetType = typeof PlanetType[keyof typeof PlanetType];
 
-
 export class PlanetFactory {
   private scene: Scene;
 
   constructor(scene: Scene) {
     this.scene = scene;
-  
-  
   }
-
-  
 
   createPlanet(x: number, y: number, radius: number, type: PlanetType): GameObjects.Container {
     const container = this.scene.add.container(x, y);
@@ -146,29 +141,28 @@ export class PlanetFactory {
     // Base helada
     const base = this.scene.add.circle(0, 0, radius, 0xb0e0e6);
     
-    // Capas de hielo
-    const ice1 = this.scene.add.circle(0, 0, radius * 0.9, 0xe0ffff, 0.8);
-    const ice2 = this.scene.add.circle(0, 0, radius * 0.7, 0xf0f8ff, 0.6);
+    // Capa de hielo
+    const iceLayer = this.scene.add.circle(0, 0, radius * 0.9, 0xe0ffff, 0.8);
     
     // Grietas de hielo usando Graphics
     const cracks = this.scene.add.graphics();
-    cracks.lineStyle(2, 0x4682b4, 0.8);
-    
-    // Dibujar grietas irregulares
+    cracks.lineStyle(2, 0x4682b4, 0.6);
     this.drawIceCracks(cracks, radius);
     
-    // Brillo cristalino
-    const shine = this.scene.add.circle(-radius * 0.3, -radius * 0.3, 
-                                       radius * 0.4, 0xffffff, 0.4);
-    shine.setBlendMode(Phaser.BlendModes.ADD);
+    // Brillos de cristales de hielo
+    const shine1 = this.scene.add.circle(-radius * 0.3, radius * 0.2, radius * 0.1, 0xffffff, 0.7);
+    const shine2 = this.scene.add.circle(radius * 0.2, -radius * 0.4, radius * 0.08, 0xffffff, 0.6);
     
-    container.add([base, ice1, ice2, cracks, shine]);
+    shine1.setBlendMode(Phaser.BlendModes.ADD);
+    shine2.setBlendMode(Phaser.BlendModes.ADD);
     
-    // Efecto de parpadeo del brillo
+    container.add([base, iceLayer, cracks, shine1, shine2]);
+    
+    // Animación sutil de brillos
     this.scene.tweens.add({
-      targets: shine,
-      alpha: 0.2,
-      duration: 2000,
+      targets: [shine1, shine2],
+      alpha: 0.3,
+      duration: 3000,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
@@ -178,48 +172,42 @@ export class PlanetFactory {
   }
 
   private createRockyPlanet(container: GameObjects.Container, radius: number): GameObjects.Container {
-    // Base rocosa con un tono gris más natural
-    const base = this.scene.add.circle(0, 0, radius, 0x828282);
+    // Base rocosa
+    const base = this.scene.add.circle(0, 0, radius, 0x696969);
     
-    // Capas de roca con diferentes tonos
-    const layer1 = this.scene.add.circle(0, 0, radius * 0.85, 0x696969);
+    // Capa de terreno irregular
+    const layer1 = this.scene.add.circle(0, 0, radius * 0.8, 0x808080);
     
-    // Cráteres y relieves usando Graphics
+    // Formaciones rocosas usando Graphics
     const terrain = this.scene.add.graphics();
-    terrain.fillStyle(0x4a4a4a, 0.8);
+    terrain.fillStyle(0x556b2f, 0.7);
     
-    // Crear cráteres aleatorios
-    for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2;
-        const distance = Phaser.Math.FloatBetween(0.2, 0.7) * radius;
-        const craterX = Math.cos(angle) * distance;
-        const craterY = Math.sin(angle) * distance;
-        const craterSize = radius * Phaser.Math.FloatBetween(0.1, 0.2);
-        
-        terrain.fillCircle(craterX, craterY, craterSize);
+    // Crear montañas/crestas
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2;
+      const x = Math.cos(angle) * radius * 0.6;
+      const y = Math.sin(angle) * radius * 0.6;
+      terrain.fillTriangle(x, y, x - 10, y + 15, x + 10, y + 15);
     }
     
-    // Detalles de superficie
+    // Detalles rocosos
     const details = this.scene.add.graphics();
-    details.lineStyle(1, 0x595959, 0.6);
+    details.lineStyle(1, 0x2f4f4f, 0.6);
     
-    // Crear líneas de fractura aleatorias
-    for (let i = 0; i < 5; i++) {
-        const startAngle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-        const length = radius * Phaser.Math.FloatBetween(0.4, 0.8);
-        const startX = Math.cos(startAngle) * radius * 0.3;
-        const startY = Math.sin(startAngle) * radius * 0.3;
-        const endX = startX + Math.cos(startAngle) * length;
-        const endY = startY + Math.sin(startAngle) * length;
-        
-        details.beginPath();
-        details.moveTo(startX, startY);
-        details.lineTo(endX, endY);
-        details.strokePath();
+    for (let i = 0; i < 8; i++) {
+      const startAngle = (i / 8) * Math.PI * 2;
+      const startX = Math.cos(startAngle) * radius * 0.3;
+      const startY = Math.sin(startAngle) * radius * 0.3;
+      const endX = Math.cos(startAngle) * radius * 0.7;
+      const endY = Math.sin(startAngle) * radius * 0.7;
+      
+      details.beginPath();
+      details.moveTo(startX, startY);
+      details.lineTo(endX, endY);
+      details.strokePath();
     }
     
     container.add([base, layer1, terrain, details]);
-    
     return container;
   }
 
@@ -229,8 +217,6 @@ export class PlanetFactory {
     
     // Ríos de lava usando Graphics
     const lava = this.scene.add.graphics();
-    
-    // Crear patrones de lava
     this.drawLavaPatterns(lava, radius);
     
     // Puntos calientes brillantes
@@ -287,83 +273,87 @@ export class PlanetFactory {
     // Brillos
     const shine1 = this.scene.add.circle(-radius * 0.2, -radius * 0.2, 
                                         radius * 0.15, 0xffffff, 0.6);
-    const shine2 = this.scene.add.circle(radius * 0.3, radius * 0.3, 
-                                        radius * 0.1, 0xffffff, 0.4);
+    const shine2 = this.scene.add.circle(radius * 0.3, radius * 0.1, 
+                                        radius * 0.1, 0xffffff, 0.5);
     
     shine1.setBlendMode(Phaser.BlendModes.ADD);
     shine2.setBlendMode(Phaser.BlendModes.ADD);
     
     container.add([base, crystal1, shine1, shine2]);
     
-    // Efecto de brillo pulsante
+    // Animación de cristales pulsantes
     this.scene.tweens.add({
-        targets: [shine1, shine2],
-        alpha: 0.2,
-        duration: 1500,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
+      targets: crystal1,
+      alpha: 0.4,
+      duration: 2000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
     });
     
     return container;
   }
 
   private createAlienPlanet(container: GameObjects.Container, radius: number): GameObjects.Container {
-    // Base del planeta alienígena
+    // Base alienígena con colores extraños
     const base = this.scene.add.circle(0, 0, radius, 0x4b0082);
     
-    // Patrones extraños en la superficie
-    const patterns = this.scene.add.graphics();
-    patterns.lineStyle(2, 0x9400d3, 0.7);
+    // Capas con colores alienígenas
+    const layer1 = this.scene.add.circle(0, 0, radius * 0.8, 0x8b008b, 0.7);
+    const layer2 = this.scene.add.circle(0, 0, radius * 0.6, 0x9400d3, 0.5);
     
-    // Crear patrones geométricos alienígenas
-    for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2;
-        const x = Math.cos(angle) * radius * 0.7;
-        const y = Math.sin(angle) * radius * 0.7;
-        
-        patterns.beginPath();
-        patterns.moveTo(0, 0);
-        patterns.lineTo(x, y);
-        patterns.strokePath();
-        
-        // Agregar símbolos extraños
-        const symbol = this.scene.add.circle(x * 0.8, y * 0.8, 
-                                           radius * 0.1, 0x00ff00, 0.6);
-        container.add(symbol);
+    // Estructuras alienígenas usando Graphics
+    const structures = this.scene.add.graphics();
+    structures.fillStyle(0x00ff00, 0.6);
+    
+    // Crear formas geométricas extrañas
+    for (let i = 0; i < 3; i++) {
+      const angle = (i / 3) * Math.PI * 2;
+      const x = Math.cos(angle) * radius * 0.4;
+      const y = Math.sin(angle) * radius * 0.4;
+      
+      structures.fillTriangle(
+        x, y - 10,
+        x - 8, y + 5,
+        x + 8, y + 5
+      );
     }
     
-    // Aura extraña
-    const aura = this.scene.add.circle(0, 0, radius * 1.1, 0x32cd32, 0.2);
-    aura.setBlendMode(Phaser.BlendModes.ADD);
+    // Luces pulsantes
+    const light1 = this.scene.add.circle(radius * 0.2, -radius * 0.3, radius * 0.05, 0x00ff00);
+    const light2 = this.scene.add.circle(-radius * 0.3, radius * 0.2, radius * 0.05, 0xff00ff);
     
-    container.add([base, patterns, aura]);
+    light1.setBlendMode(Phaser.BlendModes.ADD);
+    light2.setBlendMode(Phaser.BlendModes.ADD);
     
-    // Animación de rotación de patrones
+    container.add([base, layer1, layer2, structures, light1, light2]);
+    
+    // Animación de luces alienígenas
     this.scene.tweens.add({
-        targets: patterns,
-        rotation: Math.PI * 2,
-        duration: 20000,
-        repeat: -1,
-        ease: 'Linear'
+      targets: [light1, light2],
+      scaleX: 2,
+      scaleY: 2,
+      alpha: 0.3,
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
     });
     
     return container;
   }
 
   private createRingedPlanet(container: GameObjects.Container, radius: number): GameObjects.Container {
-    // Planeta base (como Saturno)
-    const planet = this.createGasGiant(container, radius);
+    // Planeta base
+    const planet = this.scene.add.circle(0, 0, radius, 0xdaa520);
     
-    // Sistema de anillos
+    // Anillos usando Graphics
     const rings = this.scene.add.graphics();
+    const ringColors = [0xffd700, 0xffb347, 0xff8c69];
     
-    // Múltiples anillos con diferentes opacidades
-    const ringRadii = [radius * 1.3, radius * 1.5, radius * 1.7, radius * 1.9];
-    const ringColors = [0xd2b48c, 0xdaa520, 0xcd853f, 0x8b7355];
-    
-    ringRadii.forEach((ringRadius, index) => {
-      rings.lineStyle(radius * 0.05, ringColors[index], 0.6 - index * 0.1);
+    ringColors.forEach((color, index) => {
+      const ringRadius = radius * (1.5 + index * 0.3);
+      rings.lineStyle(radius * 0.05, color, 0.6 - index * 0.1);
       rings.strokeCircle(0, 0, ringRadius);
     });
     
@@ -383,6 +373,12 @@ export class PlanetFactory {
       ease: 'none'
     });
     
+    return container;
+  }
+
+  private createBasicPlanet(container: GameObjects.Container, radius: number): GameObjects.Container {
+    const planet = this.scene.add.circle(0, 0, radius, 0x666666);
+    container.add(planet);
     return container;
   }
 
@@ -460,12 +456,6 @@ export class PlanetFactory {
       graphics.closePath();
       graphics.fillPath();
     });
-  }
-
-  private createBasicPlanet(container: GameObjects.Container, radius: number): GameObjects.Container {
-    const planet = this.scene.add.circle(0, 0, radius, 0x666666);
-    container.add(planet);
-    return container;
   }
 
   // Método para crear planetas aleatorios

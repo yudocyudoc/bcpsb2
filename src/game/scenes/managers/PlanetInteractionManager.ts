@@ -76,64 +76,39 @@ export class PlanetInteractionManager {
   private addHoverGlow(planet: GameObjects.Container) {
     // Crear un brillo sutil alrededor del planeta
     const glowSize = 80; // Tamaño del brillo
-    const glow = this.scene.add.circle(0, 0, glowSize, 0xffffff, 0.1);
+    const glow = this.scene.add.circle(0, 0, glowSize, 0xffffff, 0.15);
     glow.setBlendMode(Phaser.BlendModes.ADD);
-    glow.setName('hoverGlow'); // Para poder encontrarlo después
+    glow.setDepth(-1); // Detrás del planeta
     
-    // Añadir el brillo al planeta (al inicio para que esté detrás)
-    planet.addAt(glow, 0);
+    // Agregar el brillo al planeta con un nombre para poder encontrarlo después
+    glow.name = 'hover-glow';
+    planet.add(glow);
     
-    // Animación de pulsación
+    // Animar el brillo
     this.scene.tweens.add({
       targets: glow,
-      alpha: 0.2,
-      scaleX: 1.1,
-      scaleY: 1.1,
-      duration: 1000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
+      scaleX: 1.2,
+      scaleY: 1.2,
+      alpha: 0.25,
+      duration: 800,
+      ease: 'Sine.easeOut'
     });
   }
 
   private removeHoverGlow(planet: GameObjects.Container) {
     // Buscar y remover el brillo
-    const glow = planet.getByName('hoverGlow');
+    const glow = planet.getByName('hover-glow') as GameObjects.Arc;
     if (glow) {
-      // Animación de desvanecimiento antes de destruir
       this.scene.tweens.add({
         targets: glow,
         alpha: 0,
-        duration: 300,
-        ease: 'Sine.easeOut',
+        scale: 0.8,
+        duration: 600,
+        ease: 'Sine.easeIn',
         onComplete: () => {
           glow.destroy();
         }
       });
     }
-  }
-
-  public addContemplativeRotation(container: GameObjects.Container, embedding: number[]) {
-    const rotationSpeed = 0.5 + Math.abs(embedding[7] || 0) * 2; // 0.5 a 2.5
-    const rotationDirection = (embedding[8] || 0) > 0 ? 1 : -1;
-    
-    // Rotación lenta y contemplativa
-    this.scene.tweens.add({
-      targets: container,
-      rotation: rotationDirection * Math.PI * 2,
-      duration: (15000 + Math.random() * 10000) / rotationSpeed,
-      repeat: -1,
-      ease: 'none'
-    });
-    
-    // Pequeña oscilación vertical para sensación de vida
-    this.scene.tweens.add({
-      targets: container,
-      y: `+=${5 + Math.random() * 5}`,
-      duration: 4000 + Math.random() * 3000,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
   }
 }

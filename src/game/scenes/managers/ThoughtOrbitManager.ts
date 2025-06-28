@@ -106,7 +106,7 @@ export class ThoughtOrbitManager {
     // Encontrar pensamientos para este planeta
     let planetThoughts: ThoughtOrbit[] | undefined;
     
-    for (const [planetId, thoughts] of this.thoughtOrbits.entries()) {
+    for (const [, thoughts] of this.thoughtOrbits.entries()) {
       if (thoughts.some(t => t.planet === planetContainer)) {
         planetThoughts = thoughts;
         break;
@@ -138,7 +138,7 @@ export class ThoughtOrbitManager {
     // Encontrar pensamientos para este planeta
     let planetThoughts: ThoughtOrbit[] | undefined;
     
-    for (const [planetId, thoughts] of this.thoughtOrbits.entries()) {
+    for (const [, thoughts] of this.thoughtOrbits.entries()) {
       if (thoughts.some(t => t.planet === planetContainer)) {
         planetThoughts = thoughts;
         break;
@@ -220,7 +220,7 @@ export class ThoughtOrbitManager {
   }
 
   public destroyAllThoughts() {
-    for (const [planetId, thoughts] of this.thoughtOrbits.entries()) {
+    for (const [, thoughts] of this.thoughtOrbits.entries()) {
       thoughts.forEach(thoughtOrbit => {
         thoughtOrbit.text.destroy();
       });

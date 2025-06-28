@@ -87,7 +87,8 @@ export class ObservatoryScene extends Scene {
   }
 
   private createPlanetarySystem() {
-    const baseSpacing = 400;
+    // Espaciado más conservador para que quepan todos
+    const baseSpacing = 250; // Valor intermedio
     console.log('[ObservatoryScene] Creating', this.journeyData.length, 'planets');
 
     this.journeyData.forEach((entry, index) => {
@@ -98,7 +99,7 @@ export class ObservatoryScene extends Scene {
       const planetContainer = this.planetFactory.createPlanetFromEmbedding(
         position.x, 
         position.y, 
-        35 + Math.abs(entry.embedding[3] || 0) * 35, // Radio variable
+        30 + Math.abs(entry.embedding[3] || 0) * 25, // Radio moderado
         entry.embedding
       );
       
@@ -122,19 +123,24 @@ export class ObservatoryScene extends Scene {
   }
 
   private calculateTemporalPosition(entry: MoodEntryWithEmbedding, index: number, baseSpacing: number) {
-    // Separación temporal real
+    // Separación temporal moderada
     let temporalOffset = 0;
     
     if (index > 0) {
       const currentDate = new Date(entry.created_at);
       const previousDate = new Date(this.journeyData[index - 1].created_at);
       const daysDiff = Math.abs(currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24);
-      temporalOffset = Math.min(Math.max(daysDiff * 150, 300), 800);
+      temporalOffset = Math.min(Math.max(daysDiff * 80, 120), 400);
     }
     
     const baseX = (index - this.journeyData.length / 2) * baseSpacing;
     const x = baseX + (index > 0 ? temporalOffset : 0);
-    const y = entry.embedding[0] * 60; // Variación Y basada en embedding
+    
+    // 🔧 CORRECCIÓN CLAVE: Mantener Y cerca del centro (0,0)
+    const embeddingY = entry.embedding[0] || 0;
+    const y = Math.max(-50, Math.min(50, embeddingY * 50)); // Clamp entre -50 y +50
+    
+    console.log(`[Observatory] Planet ${index}: pos(${x}, ${y}), embedding[0]: ${embeddingY}`);
     
     return { x, y };
   }
@@ -168,6 +174,8 @@ export class ObservatoryScene extends Scene {
     
     // Zoom contemplativo
     this.input.on('wheel', (pointer: any, gameObjects: any, deltaX: number, deltaY: number) => {
+      // Usar deltaY pero marcar los otros parámetros como utilizados
+      console.log('Wheel event:', { pointer, gameObjects, deltaX });
       this.cameraManager.handleZoom(deltaY);
     });
   }
