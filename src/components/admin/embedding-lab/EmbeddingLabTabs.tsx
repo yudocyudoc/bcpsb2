@@ -9,6 +9,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 
+
 // Importar componentes existentes
 import { EmbeddingStats } from './EmbeddingStats';
 import { TestCaseManager } from './TestCaseManager';

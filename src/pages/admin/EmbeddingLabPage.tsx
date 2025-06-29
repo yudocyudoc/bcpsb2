@@ -6,8 +6,11 @@ import { ROLES } from '@/config/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Beaker, ChevronLeft, Loader2, Brain } from 'lucide-react';
+import { Beaker, ChevronLeft, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+import { EmbeddingLabTabs } from '@/components/admin/embedding-lab/EmbeddingLabTabs';
+
 
 // Importar servicios
 import { 
@@ -18,14 +21,7 @@ import {
 
 
 
-// Importar componentes modulares
-import { EmbeddingStats } from '@/components/admin/embedding-lab/EmbeddingStats';
-import { TestCaseManager } from '@/components/admin/embedding-lab/TestCaseManager';
-import { TestCasesList } from '@/components/admin/embedding-lab/TestCasesList';
-import { TextAnalyzer } from '@/components/admin/embedding-lab/TextAnalyzer';
-import { SimilarityResults } from '@/components/admin/embedding-lab/SimilarityResults';
-import { EmbeddingDisplay } from '@/components/admin/embedding-lab/EmbeddingDisplay';
-import { EmbeddingInsights } from '@/components/admin/embedding-lab/EmbeddingInsights';
+
 import { EmbeddingTestCase, TestCaseStats, SimilarityResult, AnalyzeEmbeddingResponse } from '@/types/embeddingLab';
 
 
@@ -294,45 +290,27 @@ export function EmbeddingLabPage() {
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <>
-          {/* Componentes modulares */}
-          <EmbeddingStats stats={stats} />
-          
-          <TestCaseManager
-            isCreatingCases={isCreatingCases}
-            isClearingCases={isClearingCases}
-            isLoadingData={isLoading}
-            onCreateAdditionalCases={handleCreateAdditionalCases}
-            onReloadData={loadTestCases}
-            onClearAllCases={handleClearAllCases}
-          />
-          
-          <TestCasesList testCases={testCases} />
-          
-          <TextAnalyzer
-            newText={newText}
-            isAnalyzing={isAnalyzing}
-            hasTestCases={testCases.length > 0}
-            onTextChange={setNewText}
-            onAnalyze={analyzeText}
-          />
-          
-          <SimilarityResults similarities={similarities} />
-          
-          <EmbeddingDisplay embedding={newEmbedding} />
+    
+       
+) : (
+    <EmbeddingLabTabs
+      stats={stats}
+      testCases={testCases}
+      isCreatingCases={isCreatingCases}
+      isClearingCases={isClearingCases}
+      isLoadingData={isLoading}
+      onCreateAdditionalCases={handleCreateAdditionalCases}
+      onReloadData={loadTestCases}
+      onClearAllCases={handleClearAllCases}
+      newText={newText}
+      isAnalyzing={isAnalyzing}
+      similarities={similarities}
+      newEmbedding={newEmbedding}
+      onTextChange={setNewText}
+      onAnalyze={analyzeText}
+    />
 
-          {/* Insights avanzados */}
-          {testCases.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Brain className="h-5 w-5" />
-                Análisis Avanzado de Embeddings
-              </h2>
-              <EmbeddingInsights testCases={testCases} />
-            </div>
-          )}
-        </>
+
       )}
     </div>
   );
