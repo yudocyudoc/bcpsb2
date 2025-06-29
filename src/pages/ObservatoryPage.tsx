@@ -1,26 +1,28 @@
 // src/pages/ObservatoryPage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getWeeklyJourney, type MoodEntryWithEmbedding } from '@/services/observatoryService';
-import { PhaserGame } from '@/components/observatory/PhaserGame';
+
+import { getWeeklyJourney } from '@/services/observatoryService';
+import type { MoodEntryWithEmbedding } from '@/types/observatory';
+
+import { ObservatoryCanvas } from '@/components/observatory/ObservatoryCanvas'; // ← CAMBIO PRINCIPAL
 import { Loader2, Telescope, Sparkles, Calendar, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PlanetDetailCard, type ReflectionData } from '@/components/observatory/PlanetDetailCard';
-import StarsBackground from '@/components/observatory/StarsBackground'; // Asegúrate de que la ruta sea correcta
+import StarsBackground from '@/components/observatory/StarsBackground';
 
-// --- COMPONENTE DE LAYOUT INTERNO ---
-// Este componente se encarga del fondo y de centrar el contenido para los estados de carga, error y vacío.
+// Componente de layout interno (mismo que antes)
 const ObservatoryLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
       <StarsBackground 
-     density={160}
-     baseSize={1.2}
-     sizeVariation={2}
-     twinkleSpeed={4}
-     shootingStars={2} // 2-3 estrellas fugaces es suficiente
-     className="z-0"
+        density={160}
+        baseSize={1.2}
+        sizeVariation={2}
+        twinkleSpeed={4}
+        shootingStars={2}
+        className="z-0"
       />
       <div className="relative z-10 w-full">
         {children}
@@ -29,8 +31,7 @@ const ObservatoryLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   );
 };
 
-
-// --- COMPONENTE PRINCIPAL DE LA PÁGINA ---
+// Componente principal (misma lógica, diferente Canvas)
 export function ObservatoryPage() {
   const { user } = useAuth();
   const [journeyData, setJourneyData] = useState<MoodEntryWithEmbedding[]>([]);
@@ -38,7 +39,7 @@ export function ObservatoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<MoodEntryWithEmbedding | null>(null);
 
-  // Extraer loadJourneyData fuera del useEffect para poder reutilizarlo
+  // Misma lógica de carga
   const loadJourneyData = useCallback(async () => {
     if (!user?.id) {
       setIsLoading(false);
@@ -62,84 +63,46 @@ export function ObservatoryPage() {
     }
   }, [user?.id]);
 
-  // Efecto para la carga inicial
   useEffect(() => {
     loadJourneyData();
   }, [loadJourneyData]);
 
-  // Nuevo efecto para manejar la reconexión
-  useEffect(() => {
-    const handleOnline = () => {
-      console.log('[ObservatoryPage] Network connection restored');
-      if (!journeyData.length) {
-        console.log('[ObservatoryPage] Retrying data load...');
-        loadJourneyData();
-      }
-    };
-
-    const handleOffline = () => {
-      console.log('[ObservatoryPage] Network connection lost');
-      setError('Sin conexión a internet. Reconectando...');
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [journeyData.length, loadJourneyData]);
-
-  const handlePlanetClick = (entry: MoodEntryWithEmbedding) => {
+  // Handlers (mismos que antes)
+  const handlePlanetClick = useCallback((entry: MoodEntryWithEmbedding) => {
     console.log('[ObservatoryPage] Planet clicked:', entry.id);
     setSelectedEntry(entry);
-  };
+  }, []);
 
-  const handleSaveReflection = async (data: ReflectionData) => {
-    console.log('[ObservatoryPage] Saving reflection:', data);
-    // Aquí es donde llamarías a tu servicio para guardar los datos en la base de datos.
-    // Por ejemplo: const { error } = await supabase.from('reflections').insert(data);
-    
-    // Después de guardar, podrías querer recargar los datos o simplemente cerrar el modal.
-    // Por ahora, solo simulamos que se guarda y no hacemos nada más.
-    // En un caso real, querrías manejar el estado de carga y los errores aquí también.
-    return Promise.resolve();
-  };
+  const handleSaveReflection = useCallback(async (reflectionData: ReflectionData) => {
+    console.log('[ObservatoryPage] Saving reflection:', reflectionData);
+    // Implementar guardado de reflexión
+    setSelectedEntry(null);
+  }, []);
 
-  // --- RENDERIZADO DE ESTADOS ---
-
-  // 1. Estado de Carga
+  // Estados de carga, error y vacío (iguales que antes)
   if (isLoading) {
     return (
       <ObservatoryLayout>
-        <div className="text-center space-y-4 text-slate-300 flex flex-col items-center">
-          <div className="relative mb-2">
-            <Telescope className="w-16 h-16 text-blue-400/80 animate-pulse" />
-            <Sparkles className="w-6 h-6 absolute -top-2 -right-2 text-yellow-300/70 animate-ping" />
-          </div>
-          <h2 className="text-xl font-light">Abriendo la cúpula del observatorio...</h2>
-          <p className="text-sm text-slate-400 max-w-md">Preparando tu viaje emocional de los últimos 7 días.</p>
-          <Loader2 className="w-6 h-6 animate-spin text-blue-400/80 mt-2" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+          <p className="text-slate-400 text-sm">Explorando tu universo emocional...</p>
         </div>
       </ObservatoryLayout>
     );
   }
 
-  // 2. Estado de Error
   if (error) {
     return (
       <ObservatoryLayout>
         <Alert variant="destructive" className="max-w-md mx-auto bg-red-950/50 border-red-800">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle className="text-red-300">Error de Conexión</AlertTitle>
-            <AlertDescription className="text-red-400">{error}</AlertDescription>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle className="text-red-300">Error de Conexión</AlertTitle>
+          <AlertDescription className="text-red-400">{error}</AlertDescription>
         </Alert>
       </ObservatoryLayout>
     );
   }
 
-  // 3. Estado Vacío (Sin datos)
   if (journeyData.length === 0) {
     return (
       <ObservatoryLayout>
@@ -151,10 +114,10 @@ export function ObservatoryPage() {
             </div>
             <h2 className="text-xl font-light text-slate-200">Tu universo emocional está esperando</h2>
             <p className="text-sm text-slate-400 leading-relaxed">
-              Aún no hay planetas para mostrar. Estos aparecerán aquí después de que hagas un registro y pasen al menos 24 horas, para permitir la reflexión con distancia.
+              Aún no hay pulsos para mostrar. Estos aparecerán aquí después de que hagas un registro y pasen al menos 24 horas, para permitir la reflexión con distancia.
             </p>
             <p className="text-xs text-slate-500 pt-4">
-              Cada registro se convierte en un planeta único basado en tus emociones.
+              Cada registro se convierte en un pulso emocional único basado en tus emociones.
             </p>
           </CardContent>
         </Card>
@@ -162,21 +125,18 @@ export function ObservatoryPage() {
     );
   }
 
-  // 4. Renderizado Principal (Con datos)
+  // Renderizado principal - ¡AQUÍ ESTÁ EL CAMBIO PRINCIPAL!
   return (
     <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden touch-none">
-      {/* Las estrellas ahora viven aquí, para la vista principal */}
-      <StarsBackground density={200} twinkleSpeed={12} />
-
-      {/* Contenedor del juego de Phaser */}
+      {/* R3F Canvas reemplaza PhaserGame */}
       <div className="absolute inset-0">
-        <PhaserGame 
+        <ObservatoryCanvas 
           journeyData={journeyData}
           onPlanetClick={handlePlanetClick}
         />
       </div>
 
-      {/* HUD y Overlays */}
+      {/* HUD y Overlays (iguales que antes) */}
       <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20">
         <Card className="bg-slate-900/80 backdrop-blur border-slate-800">
           <CardContent className="p-3 sm:p-4">
@@ -188,14 +148,14 @@ export function ObservatoryPage() {
         </Card>
       </div>
 
-      {/* Modal de reflexión (placeholder por ahora) */}
+      {/* Modal de reflexión (igual que antes) */}
       {selectedEntry && (
-        <PlanetDetailCard
-          moodEntry={selectedEntry}
-          isVisible={!!selectedEntry}
-          onClose={() => setSelectedEntry(null)}
-          onSaveReflection={handleSaveReflection}
-        />
+       <PlanetDetailCard
+       moodEntry={selectedEntry}  // ← Volver a 'moodEntry'
+       isVisible={!!selectedEntry}
+       onClose={() => setSelectedEntry(null)}
+       onSaveReflection={handleSaveReflection}
+     />
       )}
     </div>
   );

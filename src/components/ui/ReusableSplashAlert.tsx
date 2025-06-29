@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { ReactNode } from 'react';
+import type { SVGProps } from 'react';
 import { Button } from "@/components/ui/button";
 import { X as IconX } from "lucide-react"; // Renombrar X para evitar conflicto
 import { cn } from "@/lib/utils";
@@ -16,8 +17,8 @@ interface ReusableSplashAlertProps {
   imageClassName?: string;
   actionButtonText?: string;
   onAction?: () => void;
+  IconComponent?: React.ComponentType<SVGProps<SVGSVGElement>>; // Icono en lugar de imagen
   alertClassName?: string;
-  IconComponent?: React.ElementType; // Icono en lugar de imagen
 }
 
 export const ReusableSplashAlert: React.FC<ReusableSplashAlertProps> = ({

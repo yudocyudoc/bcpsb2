@@ -157,22 +157,6 @@ export default defineConfig({
         rollupOptions: {
             output: {
                 manualChunks: function (id) {
-                    // Separar Phaser en sub-chunks
-                    if (id.includes('node_modules/phaser/src/gameobjects/')) {
-                        return 'phaser-gameobjects';
-                    }
-                    if (id.includes('node_modules/phaser/src/physics/')) {
-                        return 'phaser-physics';
-                    }
-                    if (id.includes('node_modules/phaser/src/scene/')) {
-                        return 'phaser-scene';
-                    }
-                    if (id.includes('node_modules/phaser/src/core/')) {
-                        return 'phaser-core';
-                    }
-                    if (id.includes('phaser3-rex-plugins')) {
-                        return 'phaser-plugins';
-                    }
                     // Chunk para React
                     if (id.includes('node_modules/react/') ||
                         id.includes('node_modules/react-dom/') ||
@@ -183,10 +167,11 @@ export default defineConfig({
                     if (id.includes('node_modules/@supabase/')) {
                         return 'supabase-vendor';
                     }
-                    // Chunk para Phaser
-                    if (id.includes('node_modules/phaser/') ||
-                        id.includes('phaser3-rex-plugins')) {
-                        return 'phaser-vendor';
+                    // Chunk para Three.js y R3F
+                    if (id.includes('node_modules/three/') ||
+                        id.includes('node_modules/@react-three/fiber/') ||
+                        id.includes('node_modules/@react-three/drei/')) {
+                        return 'three-vendor';
                     }
                     // Chunk para UI components
                     if (id.includes('node_modules/@radix-ui/') ||
@@ -227,7 +212,11 @@ export default defineConfig({
             'react',
             'react-dom',
             'react-router-dom',
-            '@supabase/supabase-js'
+            '@supabase/supabase-js',
+            'three',
+            '@react-three/fiber',
+            '@react-three/drei',
+            '@react-three/postprocessing'
         ],
         exclude: [
             'phaser',
@@ -237,6 +226,9 @@ export default defineConfig({
     server: {
         host: true, // Para acceso desde red local
         port: 3000,
+    },
+    define: {
+        global: 'globalThis',
     },
     // Preview server config para PWA testing
     preview: {

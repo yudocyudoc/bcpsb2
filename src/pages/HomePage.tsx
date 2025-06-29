@@ -8,6 +8,7 @@ import React from 'react';
 
 import { Smile, HeartHandshake } from 'lucide-react';
 
+
 export default function HomePage() {
   const { profile } = useAuth();
   const welcomeArt = getWelcomeArt();

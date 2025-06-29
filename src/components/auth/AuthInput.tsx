@@ -26,7 +26,7 @@ export const AuthInput: React.FC<AuthInputProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
   // Esta línea es crucial:
-  const IconComponent = icon && typeof icon === 'string' && icon in Icons ? Icons[icon as keyof typeof Icons] as React.ElementType : null;
+  const IconComponent = icon && typeof icon === 'string' && icon in Icons ? Icons[icon as keyof typeof Icons] as React.FC<{ className?: string }> : null;
 
   const togglePasswordVisibility = () => {
     if (isPassword) {

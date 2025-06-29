@@ -66,7 +66,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
         navigateFallback: '/index.html',
         // Archivos que se guardarán en la caché de forma proactiva (precaching) al instalar el SW.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2,json}'],
-        
+
         // Estrategias de caché para peticiones en tiempo de ejecución (runtime).
         runtimeCaching: [
             // ESTRATEGIA 1: Fuentes de Google (CacheFirst)
@@ -85,11 +85,11 @@ const pwaOptions: Partial<VitePWAOptions> = {
             // Prioridad: datos frescos. Intenta ir a la red primero. Si falla, usa la última versión guardada en caché.
             // Se pone antes de la regla general de contenido para que tenga prioridad.
             {
-                urlPattern: ({ url, request }) => 
+                urlPattern: ({ url, request }) =>
                     request.method === 'GET' &&
                     url.hostname.includes('audycvtgnqotmftrldjo.supabase.co') &&
-                    (url.pathname.includes('/rest/v1/user_story_progress') || 
-                     url.pathname.includes('/rest/v1/user_story_visited_passages')),
+                    (url.pathname.includes('/rest/v1/user_story_progress') ||
+                        url.pathname.includes('/rest/v1/user_story_visited_passages')),
                 handler: 'NetworkFirst',
                 options: {
                     cacheName: 'api-user-progress-cache',
@@ -102,7 +102,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
             // Prioridad: rapidez. Muestra al instante lo que hay en caché (si hay algo).
             // Mientras tanto, va a la red a buscar una versión nueva para la próxima vez.
             {
-                urlPattern: ({ url, request }) => 
+                urlPattern: ({ url, request }) =>
                     request.method === 'GET' &&
                     url.hostname.includes('audycvtgnqotmftrldjo.supabase.co') &&
                     url.pathname.startsWith('/rest/v1/'),
@@ -118,7 +118,7 @@ const pwaOptions: Partial<VitePWAOptions> = {
             // Prioridad: integridad de datos. Siempre intenta ir a la red. Si falla, pone la petición en una cola 
             // para reintentarla automáticamente cuando vuelva la conexión.
             {
-                urlPattern: ({ url, request }) => 
+                urlPattern: ({ url, request }) =>
                     request.method !== 'GET' &&
                     url.hostname.includes('audycvtgnqotmftrldjo.supabase.co') &&
                     url.pathname.startsWith('/rest/v1/'),
@@ -158,40 +158,26 @@ export default defineConfig({
         rollupOptions: {
             output: {
                 manualChunks(id) {
-                    // Separar Phaser en sub-chunks
-                    if (id.includes('node_modules/phaser/src/gameobjects/')) {
-                        return 'phaser-gameobjects';
-                    }
-                    if (id.includes('node_modules/phaser/src/physics/')) {
-                        return 'phaser-physics';
-                    }
-                    if (id.includes('node_modules/phaser/src/scene/')) {
-                        return 'phaser-scene';
-                    }
-                    if (id.includes('node_modules/phaser/src/core/')) {
-                        return 'phaser-core';
-                    }
-                    if (id.includes('phaser3-rex-plugins')) {
-                        return 'phaser-plugins';
-                    }
-                    
+
+
                     // Chunk para React
-                    if (id.includes('node_modules/react/') || 
+                    if (id.includes('node_modules/react/') ||
                         id.includes('node_modules/react-dom/') ||
                         id.includes('node_modules/react-router-dom/')) {
                         return 'react-vendor';
                     }
-                    
+
                     // Chunk para Supabase
                     if (id.includes('node_modules/@supabase/')) {
                         return 'supabase-vendor';
                     }
-
-                    // Chunk para Phaser
-                    if (id.includes('node_modules/phaser/') ||
-                        id.includes('phaser3-rex-plugins')) {
-                        return 'phaser-vendor';
+                    // Chunk para Three.js y R3F
+                    if (id.includes('node_modules/three/') ||
+                        id.includes('node_modules/@react-three/fiber/') ||
+                        id.includes('node_modules/@react-three/drei/')) {
+                        return 'three-vendor';
                     }
+
 
                     // Chunk para UI components
                     if (id.includes('node_modules/@radix-ui/') ||
@@ -209,12 +195,12 @@ export default defineConfig({
                     }
 
                     // Features específicas
-                    if (id.includes('/components/mood/') || 
+                    if (id.includes('/components/mood/') ||
                         id.includes('/lib/mood/')) {
                         return 'mood-tracker';
                     }
 
-                    if (id.includes('/components/observatory/') || 
+                    if (id.includes('/components/observatory/') ||
                         id.includes('/scenes/')) {
                         return 'observatory';
                     }
@@ -231,10 +217,14 @@ export default defineConfig({
     },
     optimizeDeps: {
         include: [
-            'react', 
+            'react',
             'react-dom',
             'react-router-dom',
-            '@supabase/supabase-js'
+            '@supabase/supabase-js',
+            'three',
+            '@react-three/fiber',
+            '@react-three/drei',
+            '@react-three/postprocessing'
         ],
         exclude: [
             'phaser',
@@ -245,6 +235,10 @@ export default defineConfig({
         host: true, // Para acceso desde red local
         port: 3000,
     },
+
+    define: {
+        global: 'globalThis',
+      },
 
     // Preview server config para PWA testing
     preview: {
