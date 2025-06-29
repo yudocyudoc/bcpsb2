@@ -16,6 +16,8 @@ import {
   clearAllTestCases 
 } from '@/services/embeddingTestService';
 
+
+
 // Importar componentes modulares
 import { EmbeddingStats } from '@/components/admin/embedding-lab/EmbeddingStats';
 import { TestCaseManager } from '@/components/admin/embedding-lab/TestCaseManager';
@@ -26,19 +28,6 @@ import { EmbeddingDisplay } from '@/components/admin/embedding-lab/EmbeddingDisp
 import { EmbeddingInsights } from '@/components/admin/embedding-lab/EmbeddingInsights';
 import { EmbeddingTestCase, TestCaseStats, SimilarityResult, AnalyzeEmbeddingResponse } from '@/types/embeddingLab';
 
-
-interface MoodEntry {
-    id: string;
-    user_id: string;
-    created_at: string;
-    suceso: string | null;
-    emociones_principales: string[] | null;
-    pensamientos_automaticos: string | null;
-    embedding?: string | number[];
-    intensidades: any;
-    otras_emociones_custom: any;
-    creencias_subyacentes: string | null;
-  }
 
 
 export function EmbeddingLabPage() {
@@ -93,8 +82,8 @@ export function EmbeddingLabPage() {
       }
 
       const processedCases: EmbeddingTestCase[] = data
-        .map((entry: MoodEntry) => {
-          try {
+      .map((entry: any) => {
+        try {
             const embeddingData = entry.embedding;
             if (!embeddingData) {
               console.warn(`No embedding data for entry ${entry.id}`);
@@ -111,14 +100,14 @@ export function EmbeddingLabPage() {
             }
 
             return {
-              id: entry.id,
-              user_id: entry.user_id,
-              created_at: entry.created_at,
-              suceso: entry.suceso || '',
-              emociones_principales: entry.emociones_principales || [],
-              pensamientos_automaticos: entry.pensamientos_automaticos || '',
-              embedding: embedding
-            };
+                id: entry.id,
+                user_id: entry.user_id,
+                created_at: entry.created_at,
+                suceso: entry.suceso || '',
+                emociones_principales: entry.emociones_principales || [],
+                pensamientos_automaticos: entry.pensamientos_automaticos || '',
+                embedding: embedding
+              };
           } catch (e) {
             console.warn(`Error processing entry ${entry.id}:`, e);
             return null;
