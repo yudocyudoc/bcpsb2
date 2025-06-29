@@ -26,8 +26,23 @@ import { EmbeddingDisplay } from '@/components/admin/embedding-lab/EmbeddingDisp
 import { EmbeddingInsights } from '@/components/admin/embedding-lab/EmbeddingInsights';
 import { EmbeddingTestCase, TestCaseStats, SimilarityResult, AnalyzeEmbeddingResponse } from '@/types/embeddingLab';
 
+
+interface MoodEntry {
+    id: string;
+    user_id: string;
+    created_at: string;
+    suceso: string | null;
+    emociones_principales: string[] | null;
+    pensamientos_automaticos: string | null;
+    embedding?: string | number[];
+    intensidades: any;
+    otras_emociones_custom: any;
+    creencias_subyacentes: string | null;
+  }
+
+
 export function EmbeddingLabPage() {
-  const { profile, user } = useAuth();
+  const { profile } = useAuth();
   const navigate = useNavigate();
   
   // Estados principales
@@ -78,11 +93,17 @@ export function EmbeddingLabPage() {
       }
 
       const processedCases: EmbeddingTestCase[] = data
-        .map(entry => {
+        .map((entry: MoodEntry) => {
           try {
-            const embedding = typeof entry.embedding === 'string' 
-              ? JSON.parse(entry.embedding)
-              : entry.embedding;
+            const embeddingData = entry.embedding;
+            if (!embeddingData) {
+              console.warn(`No embedding data for entry ${entry.id}`);
+              return null;
+            }
+
+            const embedding = typeof embeddingData === 'string' 
+              ? JSON.parse(embeddingData)
+              : embeddingData;
               
             if (!Array.isArray(embedding) || embedding.length === 0) {
               console.warn(`Invalid embedding for entry ${entry.id}`);

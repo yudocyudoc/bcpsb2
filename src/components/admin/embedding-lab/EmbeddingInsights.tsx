@@ -11,15 +11,8 @@ import {
   Info
 } from 'lucide-react';
 
-interface EmbeddingTestCase {
-  id: string;
-  user_id: string;
-  created_at: string;
-  suceso: string;
-  emociones_principales: string[];
-  pensamientos_automaticos: string;
-  embedding: number[];
-}
+import { EmbeddingTestCase } from '@/types/embeddingLab';
+
 
 interface EmbeddingInsightsProps {
   testCases: EmbeddingTestCase[];

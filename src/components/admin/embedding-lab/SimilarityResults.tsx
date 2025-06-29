@@ -3,13 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { BarChart3 } from 'lucide-react';
+import { SimilarityResult } from '@/types/embeddingLab';
 
-interface SimilarityResult {
-  text1: string;
-  text2: string;
-  similarity: number;
-  distance: number;
-}
+
 
 interface SimilarityResultsProps {
   similarities: SimilarityResult[];

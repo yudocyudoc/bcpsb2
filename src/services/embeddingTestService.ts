@@ -160,10 +160,10 @@ export async function getTestCaseStats() {
 
   try {
     const { data, error } = await supabase
-      .from('mood_entries')
-      .select('id, created_at, embedding, emociones_principales')
-      .eq('user_id', testUserId)
-      .order('created_at', { ascending: false });
+    .from('mood_entries')
+    .select('*')
+    .eq('user_id', testUserId)
+    .order('created_at', { ascending: false });
 
     if (error) {
       console.error('[EmbeddingTestService] Error fetching test case stats:', error);
@@ -171,11 +171,14 @@ export async function getTestCaseStats() {
     }
 
     const total = data?.length || 0;
-    const withEmbeddings = data?.filter(entry => entry.embedding).length || 0;
+    const withEmbeddings = data?.filter(entry => 'embedding' in entry && entry.embedding).length || 0;
     
     
     const categories = data?.length ? 1 : 0; // Simplificado por ahora
 
+    const emotions = new Set(
+      data?.flatMap(entry => entry.emociones_principales || []) || []
+    ).size;
 
     return {
       total,
