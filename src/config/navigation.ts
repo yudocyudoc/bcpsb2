@@ -1,5 +1,5 @@
 // src/config/navigation.ts
-import { Home, HeartHandshake, Smile, Settings, Users, Edit3, ShieldCheck, BookHeart } from 'lucide-react';
+import { Home, HeartHandshake, Smile, Settings, Users, Edit3, ShieldCheck, BookHeart, Beaker } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react'; // Asegúrate de importar LucideIcon
 
 // Define y exporta ROLES
@@ -53,7 +53,7 @@ export const adminNavItems: NavItem[] = [
     children: [
       { title: 'Gestión de Usuarios', href: '/admin/users', icon: Users, roles: [ROLES.ADMIN] },
       { title: 'Editar Lecciones', href: '/admin/lessons', icon: Edit3, roles: [ROLES.ADMIN] }, // Ejemplo
-      // Más items de admin
+      { title: 'Laboratorio de Embeddings', href: '/admin/embedding-lab', icon: Beaker, roles: [ROLES.ADMIN], badge: 'BETA'},
     ],
   },
 ];

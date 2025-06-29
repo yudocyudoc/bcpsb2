@@ -1,11 +1,8 @@
 // src/pages/ObservatoryPage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-
-import { getWeeklyJourney } from '@/services/observatoryService';
-import type { MoodEntryWithEmbedding } from '@/types/observatory';
-
-import { ObservatoryCanvas } from '@/components/observatory/ObservatoryCanvas'; // ← CAMBIO PRINCIPAL
+import { getWeeklyJourney, type MoodEntryWithEmbedding } from '@/services/observatoryService';
+import { ObservatoryCanvas } from '@/components/observatory/ObservatoryCanvas';
 import { Loader2, Telescope, Sparkles, Calendar, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -31,7 +28,7 @@ const ObservatoryLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   );
 };
 
-// Componente principal (misma lógica, diferente Canvas)
+// Componente principal 
 export function ObservatoryPage() {
   const { user } = useAuth();
   const [journeyData, setJourneyData] = useState<MoodEntryWithEmbedding[]>([]);
@@ -39,7 +36,7 @@ export function ObservatoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<MoodEntryWithEmbedding | null>(null);
 
-  // Misma lógica de carga
+  // Lógica de carga
   const loadJourneyData = useCallback(async () => {
     if (!user?.id) {
       setIsLoading(false);
@@ -67,7 +64,7 @@ export function ObservatoryPage() {
     loadJourneyData();
   }, [loadJourneyData]);
 
-  // Handlers (mismos que antes)
+  // Handlers
   const handlePlanetClick = useCallback((entry: MoodEntryWithEmbedding) => {
     console.log('[ObservatoryPage] Planet clicked:', entry.id);
     setSelectedEntry(entry);
@@ -79,7 +76,7 @@ export function ObservatoryPage() {
     setSelectedEntry(null);
   }, []);
 
-  // Estados de carga, error y vacío (iguales que antes)
+  // Estados de carga, error y vacío
   if (isLoading) {
     return (
       <ObservatoryLayout>
@@ -125,7 +122,7 @@ export function ObservatoryPage() {
     );
   }
 
-  // Renderizado principal - ¡AQUÍ ESTÁ EL CAMBIO PRINCIPAL!
+  // Renderizado principal con R3F Canvas
   return (
     <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden touch-none">
       {/* R3F Canvas reemplaza PhaserGame */}
@@ -136,7 +133,7 @@ export function ObservatoryPage() {
         />
       </div>
 
-      {/* HUD y Overlays (iguales que antes) */}
+      {/* HUD y Overlays */}
       <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20">
         <Card className="bg-slate-900/80 backdrop-blur border-slate-800">
           <CardContent className="p-3 sm:p-4">
@@ -148,14 +145,14 @@ export function ObservatoryPage() {
         </Card>
       </div>
 
-      {/* Modal de reflexión (igual que antes) */}
+      {/* Modal de reflexión */}
       {selectedEntry && (
-       <PlanetDetailCard
-       moodEntry={selectedEntry}  // ← Volver a 'moodEntry'
-       isVisible={!!selectedEntry}
-       onClose={() => setSelectedEntry(null)}
-       onSaveReflection={handleSaveReflection}
-     />
+        <PlanetDetailCard
+          moodEntry={selectedEntry}
+          isVisible={!!selectedEntry}
+          onClose={() => setSelectedEntry(null)}
+          onSaveReflection={handleSaveReflection}
+        />
       )}
     </div>
   );

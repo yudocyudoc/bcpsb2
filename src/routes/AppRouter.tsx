@@ -22,8 +22,7 @@ const LazyInteractiveStoriesListPage = React.lazy(() => import('@/pages/interact
 const LazyInteractiveStoryPlayerPage = React.lazy(() => import('@/pages/interactive/InteractiveStoryPlayerPage').then(module => ({ default: module.InteractiveStoryPlayerPage })));
 const LazyProfilePage = React.lazy(() => import('@/pages/auth/ProfilePage').then(module => ({ default: module.ProfilePage })));
 const LazyObservatoryPage = React.lazy(() => import('@/pages/ObservatoryPage').then(module => ({ default: module.ObservatoryPage })));
-
-
+const LazyEmbeddingLabPage = React.lazy(() => import('@/pages/admin/EmbeddingLabPage').then(module => ({ default: module.EmbeddingLabPage })));
 
 
 
@@ -182,6 +181,17 @@ export const AppRouter = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="admin/embedding-lab"
+          element={
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+              <React.Suspense fallback={<LoadingFallback />}>
+                <LazyEmbeddingLabPage />
+              </React.Suspense>
+            </ProtectedRoute>
+          }
+         />
+
 
         {/* Puedes agrupar más rutas de admin aquí si tienen un layout común */}
         {/* <Route path="admin" element={<ProtectedRoute allowedRoles={[ROLES.ADMIN]}><AdminLayout /></ProtectedRoute>}>
