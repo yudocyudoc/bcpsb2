@@ -9,7 +9,6 @@ import {
   TrendingUp
 } from 'lucide-react';
 
-
 // Importar componentes existentes
 import { EmbeddingStats } from './EmbeddingStats';
 import { TestCaseManager } from './TestCaseManager';
@@ -18,6 +17,8 @@ import { TextAnalyzer } from './TextAnalyzer';
 import { SimilarityResults } from './SimilarityResults';
 import { EmbeddingDisplay } from './EmbeddingDisplay';
 import { EmbeddingInsights } from './EmbeddingInsights';
+// ✅ AGREGAR IMPORT DEL COMPONENTE DE CHARTS
+import { EmbeddingCharts } from './EmbeddingCharts';
 
 // Importar tipos
 import { EmbeddingTestCase, TestCaseStats, SimilarityResult } from '@/types/embeddingLab';
@@ -116,18 +117,9 @@ export function EmbeddingLabTabs({
         )}
       </TabsContent>
 
-      {/* Tab 3: Visualizaciones */}
+      {/* Tab 3: Visualizaciones - ✅ USAR EL COMPONENTE REAL */}
       <TabsContent value="visualizaciones" className="space-y-6 mt-6">
-        <div className="flex items-center justify-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-          <div className="text-center">
-            <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Visualizaciones 2D</h3>
-            <p className="text-gray-500">Charts interactivos próximamente</p>
-            <p className="text-sm text-gray-400 mt-2">
-              Scatter plots, heatmaps, y reducción dimensional
-            </p>
-          </div>
-        </div>
+        <EmbeddingCharts testCases={testCases} />
       </TabsContent>
 
       {/* Tab 4: Insights Avanzados */}

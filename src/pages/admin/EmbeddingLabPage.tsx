@@ -22,7 +22,7 @@ import {
 
 
 
-import { EmbeddingTestCase, TestCaseStats, SimilarityResult, AnalyzeEmbeddingResponse } from '@/types/embeddingLab';
+import { EmbeddingTestCase, TestCaseStats, SimilarityResult } from '@/types/embeddingLab';
 
 
 
@@ -173,70 +173,61 @@ export function EmbeddingLabPage() {
   }, [loadStats]);
 
   // Analizar similitudes usando la Edge Function
-  const analyzeText = useCallback(async () => {
+ // Reemplazar toda la función analyzeText con esto:
+const analyzeText = useCallback(async () => {
     if (!newText.trim()) {
       toast.error('Por favor ingresa un texto para analizar');
       return;
     }
-
+  
     if (testCases.length === 0) {
       toast.error('No hay casos de prueba disponibles para comparar');
       return;
     }
-
+  
     setIsAnalyzing(true);
     setSimilarities([]);
     setNewEmbedding(null);
-
+  
     try {
-      const referenceTexts = testCases.map(testCase => {
-        const combinedText = [
-          testCase.suceso,
-          testCase.pensamientos_automaticos,
-          testCase.emociones_principales.join(', ')
-        ].filter(Boolean).join(' | ');
-        
-        return combinedText;
-      });
-
-      const { data, error } = await supabase.functions.invoke('analyze-embedding', {
+      // Primero obtener embedding del texto nuevo
+      const { data: newEmbeddingData, error: newError } = await supabase.functions.invoke('analyze-embedding', {
         body: {
-          new_text: newText.trim(),
-          reference_texts: referenceTexts
+          mode: 'single',
+          text1: newText.trim()
         }
       });
-
-      if (error) {
-        console.error('Edge function error:', error);
-        toast.error('Error al llamar al servicio de análisis');
-        return;
+  
+      if (newError || !newEmbeddingData.success) {
+        throw new Error('Error obteniendo embedding del texto nuevo');
       }
-
-      const response = data as AnalyzeEmbeddingResponse;
-      
-      if (!response.success) {
-        console.error('Analysis failed:', response.error);
-        toast.error(`Error en el análisis: ${response.error}`);
-        return;
-      }
-
-      if (response.similarities) {
-        const processedSimilarities: SimilarityResult[] = response.similarities.map((sim, index) => ({
+  
+      const newEmbedding = newEmbeddingData.embedding;
+      setNewEmbedding(newEmbedding);
+  
+      // Calcular similitudes localmente con los embeddings existentes
+      const similarities: SimilarityResult[] = testCases.map((testCase) => {
+        // Función de similitud coseno local
+        const cosineSimilarity = (a: number[], b: number[]): number => {
+          const dotProduct = a.reduce((sum, ai, i) => sum + ai * b[i], 0);
+          const magnitudeA = Math.sqrt(a.reduce((sum, ai) => sum + ai * ai, 0));
+          const magnitudeB = Math.sqrt(b.reduce((sum, bi) => sum + bi * bi, 0));
+          return dotProduct / (magnitudeA * magnitudeB);
+        };
+  
+        const similarity = cosineSimilarity(newEmbedding, testCase.embedding);
+        
+        return {
           text1: newText.trim(),
-          text2: referenceTexts[index] || `Caso ${index + 1}`,
-          similarity: sim.similarity,
-          distance: sim.distance
-        }));
-
-        setSimilarities(processedSimilarities);
-      }
-
-      if (response.new_embedding) {
-        setNewEmbedding(response.new_embedding);
-      }
-
-      toast.success(`Análisis completado. ${response.similarities?.length || 0} comparaciones realizadas.`);
-
+          text2: `${testCase.suceso} (${testCase.emociones_principales.join(', ')})`,
+          similarity: Number((similarity * 100).toFixed(1)),
+          distance: Number((1 - similarity).toFixed(3))
+        };
+      });
+  
+      setSimilarities(similarities);
+      toast.success(`✅ Análisis completado. ${similarities.length} comparaciones realizadas.`);
+  
     } catch (error) {
       console.error('Error analyzing text:', error);
       toast.error('Error inesperado durante el análisis');

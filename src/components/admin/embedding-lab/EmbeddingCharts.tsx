@@ -1,6 +1,14 @@
 // src/components/admin/embedding-lab/EmbeddingCharts.tsx
-import React, { useMemo } from 'react';
+import  { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { 
+    BarChart3, 
+    GitBranch as ScatterIcon, 
+    TrendingUp,
+    Zap,
+    Activity
+} from 'lucide-react';
 import { 
   ScatterChart, 
   Scatter, 
@@ -13,14 +21,6 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import { Badge } from '@/components/ui/badge';
-import { 
-  BarChart3, 
-  Scatter as ScatterIcon, 
-  TrendingUp,
-  Zap,
-  Activity
-} from 'lucide-react';
 import { EmbeddingTestCase } from '@/types/embeddingLab';
 
 interface EmbeddingChartsProps {
@@ -242,15 +242,10 @@ export function EmbeddingCharts({ testCases }: EmbeddingChartsProps) {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData.emotionData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="emotion" 
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                />
+                <XAxis dataKey="emotion" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="count">
                   {chartData.emotionData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
@@ -261,12 +256,12 @@ export function EmbeddingCharts({ testCases }: EmbeddingChartsProps) {
         </CardContent>
       </Card>
 
-      {/* Evolución Temporal */}
+      {/* Magnitud Temporal */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Evolución de Magnitudes de Embedding
+            Magnitud de Embeddings en el Tiempo
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -282,7 +277,7 @@ export function EmbeddingCharts({ testCases }: EmbeddingChartsProps) {
                       const data = payload[0].payload;
                       return (
                         <div className="bg-white p-3 border rounded shadow-lg">
-                          <p className="font-medium">Caso {label}</p>
+                          <p className="font-medium">Caso #{label}</p>
                           <p className="text-sm">Magnitud: {data.magnitude}</p>
                           <p className="text-sm">Emoción: {data.emotion}</p>
                           <p className="text-xs text-gray-400">{data.date}</p>
@@ -292,39 +287,79 @@ export function EmbeddingCharts({ testCases }: EmbeddingChartsProps) {
                     return null;
                   }}
                 />
-                <Bar dataKey="magnitude" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="magnitude" fill="#8884d8" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
 
-      {/* Matriz de Similitudes */}
+      {/* Matriz de Similitudes (Heat Map Simplificado) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Similitudes Entre Casos (Primeros 6)
+            <Zap className="h-5 w-5" />
+            Similitudes entre Casos (Primeros 6)
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             {chartData.similarities.map((sim, index) => (
-              <div key={index} className="flex items-center gap-3">
-                <div className="w-24 text-sm font-medium">
-                  {sim.source} → {sim.target}
-                </div>
-                <div className="flex-1 bg-gray-200 rounded-full h-3">
+              <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                <span className="text-sm font-medium">
+                  {sim.source} ↔ {sim.target}
+                </span>
+                <div className="flex items-center gap-2">
                   <div 
-                    className="h-3 rounded-full bg-gradient-to-r from-red-500 to-green-500"
-                    style={{ width: `${sim.similarity}%` }}
+                    className="w-20 h-4 rounded"
+                    style={{
+                      backgroundColor: `hsl(${sim.similarity * 120}, 70%, 50%)`,
+                    }}
                   />
-                </div>
-                <div className="w-12 text-sm font-mono">
-                  {sim.similarity}%
+                  <span className="text-sm font-mono w-12">
+                    {sim.similarity}%
+                  </span>
                 </div>
               </div>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Métricas Avanzadas */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Métricas del Conjunto de Datos
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-blue-50 rounded-lg">
+              <div className="text-xl font-bold text-blue-600">
+                {chartData.scatterData.length}
+              </div>
+              <div className="text-xs text-blue-600">Total Puntos</div>
+            </div>
+            <div className="text-center p-3 bg-green-50 rounded-lg">
+              <div className="text-xl font-bold text-green-600">
+                {chartData.emotionData.length}
+              </div>
+              <div className="text-xs text-green-600">Emociones Únicas</div>
+            </div>
+            <div className="text-center p-3 bg-purple-50 rounded-lg">
+              <div className="text-xl font-bold text-purple-600">
+                {Math.round(chartData.similarities.reduce((sum, s) => sum + s.similarity, 0) / chartData.similarities.length || 0)}%
+              </div>
+              <div className="text-xs text-purple-600">Similitud Promedio</div>
+            </div>
+            <div className="text-center p-3 bg-orange-50 rounded-lg">
+              <div className="text-xl font-bold text-orange-600">
+                {Math.round(chartData.temporalData.reduce((sum, t) => sum + t.magnitude, 0) / chartData.temporalData.length * 100) / 100}
+              </div>
+              <div className="text-xs text-orange-600">Magnitud Promedio</div>
+            </div>
           </div>
         </CardContent>
       </Card>
