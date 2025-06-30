@@ -20,6 +20,7 @@ export interface MoodEntry {
   otrasEmocionesCustom: OtherEmotions | null;
   intensidades: EmotionIntensities | null;
   duracion?: string | null;
+  duracionesIndividuales?: Record<string, string> | null;
   pensamientosAutomaticos: string | null;
   creenciasSubyacentes: string | null;
   createdAtClient: number;
@@ -44,6 +45,7 @@ export interface MoodEntrySupabaseRow {
   otras_emociones_custom: unknown;
   intensidades: unknown;
   duracion: string | null;
+  duraciones_individuales: unknown;
   pensamientos_automaticos: string | null;
   creencias_subyacentes: string | null;
   embedding: string | null;
@@ -60,7 +62,8 @@ export interface MoodEntrySupabaseInsert {
   sub_emociones: Json;
   otras_emociones_custom: Json;
   intensidades: Json;
-  duracion?: string; 
+  duracion?: string | null;
+  duraciones_individuales?: Json;
   pensamientos_automaticos: string;
   creencias_subyacentes: string;
 }

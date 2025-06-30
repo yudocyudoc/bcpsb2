@@ -18,8 +18,6 @@ import type {
   EmotionIntensities,
 } from '@/types/mood';
 
-import { DEFAULT_DURATION } from '@/config/durationConfig';
-
 
 // --- Configuración de Emociones ---
 import { emotionHierarchy, emotionsList } from '@/config/emotionConfig';
@@ -62,7 +60,7 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
   const [emotionIntensities, setEmotionIntensities] = useState<EmotionIntensities>({});
 
 
-  const [duracion, setDuracion] = useState<string>(DEFAULT_DURATION);
+  const [duracion, setDuracion] = useState<string>('');
   const [showIndividualDurations, setShowIndividualDurations] = useState<boolean>(false); // ← AGREGAR
   const [individualDurations, setIndividualDurations] = useState<Record<string, string>>({}); // ← AGREGAR
 
@@ -356,6 +354,7 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
       otrasEmocionesCustom: otherEmotions,
       intensidades: emotionIntensities,
       duracion: duracion || null,
+      duracionesIndividuales: Object.keys(individualDurations).length > 0 ? individualDurations : null,
       pensamientosAutomaticos: pensamientosText,
       creenciasSubyacentes: creenciasText,
       createdAtClient: clientTimestamp,

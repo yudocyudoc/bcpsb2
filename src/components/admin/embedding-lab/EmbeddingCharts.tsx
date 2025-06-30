@@ -1,27 +1,28 @@
 // src/components/admin/embedding-lab/EmbeddingCharts.tsx
-import  { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-    BarChart3, 
-    GitBranch as ScatterIcon, 
-    TrendingUp,
-    Zap,
-    Activity
+import {
+  BarChart3,
+  GitBranch as ScatterIcon,
+  TrendingUp,
+  Zap,
+  Activity
 } from 'lucide-react';
-import { 
-  ScatterChart, 
-  Scatter, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   Cell,
   BarChart,
   Bar,
 } from 'recharts';
 import { EmbeddingTestCase } from '@/types/embeddingLab';
+import { SimilarityCalibrator } from '@/components/admin/embedding-lab/SimilarityCalibrator';
 
 interface EmbeddingChartsProps {
   testCases: EmbeddingTestCase[];
@@ -30,7 +31,7 @@ interface EmbeddingChartsProps {
 // Función para hacer PCA simple (reducción a 2D)
 function simplePCA(embeddings: number[][]): { x: number, y: number }[] {
   if (embeddings.length === 0) return [];
-  
+
   // Centrar los datos (restar la media)
   const means = new Array(embeddings[0].length).fill(0);
   embeddings.forEach(embedding => {
@@ -42,7 +43,7 @@ function simplePCA(embeddings: number[][]): { x: number, y: number }[] {
     means[i] /= embeddings.length;
   });
 
-  const centeredData = embeddings.map(embedding => 
+  const centeredData = embeddings.map(embedding =>
     embedding.map((val, i) => val - means[i])
   );
 
@@ -66,7 +67,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
 const getEmotionColor = (emotion: string): string => {
   const colorMap: Record<string, string> = {
     'Alegría': '#22c55e',
-    'Tristeza': '#3b82f6', 
+    'Tristeza': '#3b82f6',
     'Enojo': '#ef4444',
     'Ira': '#dc2626',
     'Rabia': '#b91c1c',
@@ -90,7 +91,7 @@ export function EmbeddingCharts({ testCases }: EmbeddingChartsProps) {
     // 1. Datos para Scatter Plot (PCA)
     const embeddings = testCases.map(tc => tc.embedding);
     const pcaData = simplePCA(embeddings);
-    
+
     const scatterData = testCases.map((testCase, index) => ({
       x: pcaData[index]?.x || 0,
       y: pcaData[index]?.y || 0,
@@ -114,9 +115,9 @@ export function EmbeddingCharts({ testCases }: EmbeddingChartsProps) {
     }));
 
     // 3. Datos para matriz de similitudes (solo primeros 6 casos para legibilidad)
-    const similarities: Array<{source: string, target: string, similarity: number}> = [];
+    const similarities: Array<{ source: string, target: string, similarity: number }> = [];
     const casesForMatrix = testCases.slice(0, 6);
-    
+
     for (let i = 0; i < casesForMatrix.length; i++) {
       for (let j = i + 1; j < casesForMatrix.length; j++) {
         const similarity = cosineSimilarity(
@@ -179,19 +180,19 @@ export function EmbeddingCharts({ testCases }: EmbeddingChartsProps) {
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart data={chartData.scatterData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  type="number" 
-                  dataKey="x" 
+                <XAxis
+                  type="number"
+                  dataKey="x"
                   name="Componente 1"
                   domain={['dataMin - 0.1', 'dataMax + 0.1']}
                 />
-                <YAxis 
-                  type="number" 
-                  dataKey="y" 
+                <YAxis
+                  type="number"
+                  dataKey="y"
                   name="Componente 2"
                   domain={['dataMin - 0.1', 'dataMax + 0.1']}
                 />
-                <Tooltip 
+                <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload;
@@ -216,9 +217,9 @@ export function EmbeddingCharts({ testCases }: EmbeddingChartsProps) {
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             {[...new Set(chartData.scatterData.map(d => d.emotion))].map(emotion => (
-              <Badge 
-                key={emotion} 
-                variant="secondary" 
+              <Badge
+                key={emotion}
+                variant="secondary"
                 className="text-xs"
                 style={{ backgroundColor: getEmotionColor(emotion), color: 'white' }}
               >
@@ -271,7 +272,7 @@ export function EmbeddingCharts({ testCases }: EmbeddingChartsProps) {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="index" />
                 <YAxis />
-                <Tooltip 
+                <Tooltip
                   content={({ active, payload, label }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload;
@@ -305,20 +306,22 @@ export function EmbeddingCharts({ testCases }: EmbeddingChartsProps) {
         <CardContent>
           <div className="space-y-2">
             {chartData.similarities.map((sim, index) => (
-              <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <span className="text-sm font-medium">
                   {sim.source} ↔ {sim.target}
                 </span>
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-20 h-4 rounded"
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-16 h-3 rounded-full bg-gradient-to-r"
                     style={{
-                      backgroundColor: `hsl(${sim.similarity * 120}, 70%, 50%)`,
+                      background: `linear-gradient(to right, hsl(${sim.similarity * 1.2}, 70%, 85%), hsl(${sim.similarity * 1.2}, 70%, 50%))`,
                     }}
                   />
-                  <span className="text-sm font-mono w-12">
-                    {sim.similarity}%
-                  </span>
+                  <SimilarityCalibrator
+                    similarity={sim.similarity}
+                    variant="compact"
+                    showPercentage={true}
+                  />
                 </div>
               </div>
             ))}

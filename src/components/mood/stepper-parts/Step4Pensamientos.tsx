@@ -49,6 +49,8 @@ export const Step4Pensamientos: React.FC<Step4PensamientosProps> = ({
     selectedSubEmotions,
     otherEmotions,
     emotionIntensities,
+    showIndividualDurations,
+    individualDurations,
     // pensamientosText y creenciasText ya los tenemos como props directos
   } = formDataSummary;
 
@@ -127,14 +129,14 @@ export const Step4Pensamientos: React.FC<Step4PensamientosProps> = ({
                           <ul className="list-circle pl-5 text-xs">
                             {selectedSubEmotions[emotion].map(subEmotion => (
                               <li key={`summary-sub-${subEmotion}`}>
-                              {subEmotion} - <span className="font-medium text-foreground">{emotionIntensities[subEmotion] ?? // valor}</span>
-                              {/* Agregar duración individual para sub-emoción */}
-                              {showIndividualDurations && individualDurations[subEmotion] && (
-                                <span className="text-xs text-muted-foreground ml-1">
-                                  ({getDurationLabel(individualDurations[subEmotion])})
-                                </span>
-                              )}
-                            </li>
+                                {subEmotion} - <span className="font-medium text-foreground">{emotionIntensities[subEmotion] ?? 50}%</span>
+                                {/* Agregar duración individual para sub-emoción */}
+                                {showIndividualDurations && individualDurations[subEmotion] && (
+                                  <span className="text-xs text-muted-foreground ml-1">
+                                    ({getDurationLabel(individualDurations[subEmotion])})
+                                  </span>
+                                )}
+                              </li>
                             ))}
                           </ul>
                         )}

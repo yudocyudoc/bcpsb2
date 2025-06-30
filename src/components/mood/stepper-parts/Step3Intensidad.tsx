@@ -41,17 +41,7 @@ export const Step3Intensidad: React.FC<Step3IntensidadProps> = ({
   onNext,
 }) => {
 
-  // Estado para controlar si mostrar duraciones individuales
-  const [showIndividualDurations, setShowIndividualDurations] = useState(false); 
-  const [individualDurations, setIndividualDurations] = useState<Record<string, string>>({});
 
-// Función para manejar cambios en duraciones individuales
-const handleIndividualDurationChange = (emotion: string, duration: string) => {
-  setIndividualDurations(prev => ({
-    ...prev,
-    [emotion]: duration
-  }));
-};
 
   // Crear una lista única de todas las emociones que necesitan un slider
   const allUniqueEmotionsForSliders: string[] = [];

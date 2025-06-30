@@ -147,6 +147,8 @@ export async function syncSupabaseEntriesToLocal(remoteEntries: MoodEntrySupabas
       subEmociones: (remoteEntry.sub_emociones as any) || {},
       otrasEmocionesCustom: (remoteEntry.otras_emociones_custom as any) || {},
       intensidades: (remoteEntry.intensidades as any) || {},
+      duracion: remoteEntry.duracion, 
+      duracionesIndividuales: (remoteEntry.duraciones_individuales as any) || null,
       pensamientosAutomaticos: remoteEntry.pensamientos_automaticos || '',
       creenciasSubyacentes: remoteEntry.creencias_subyacentes || '',
       createdAtClient: new Date(remoteEntry.created_at).getTime(),
