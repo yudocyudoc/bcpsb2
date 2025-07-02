@@ -7,10 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import type { MoodEntryWithEmbedding } from '@/services/observatoryService';
+import type { MoodEntryWithMetrics } from '@/types/mood';
 
 interface PlanetDetailCardProps {
-  moodEntry: MoodEntryWithEmbedding;
+  moodEntry: MoodEntryWithMetrics;
   isVisible: boolean;
   onClose: () => void;
   onSaveReflection: (data: ReflectionData) => Promise<void>;
@@ -24,9 +24,11 @@ export interface ReflectionData {
 }
 
 // Generar nombre procedimental del planeta
-const generatePlanetName = (moodEntry: MoodEntryWithEmbedding, userNickname: string = "XX"): string => {
-  const embedding = moodEntry.embedding;
-  const hash = embedding.slice(0, 3).reduce((acc, val) => acc + Math.abs(val * 1000), 0);
+const generatePlanetName = (moodEntry: MoodEntryWithMetrics, userNickname: string = "XX"): string => {
+  const embedding = moodEntry.embedding || [];
+  const hash = embedding.length > 0 
+    ? embedding.slice(0, 3).reduce((acc, val) => acc + Math.abs(val * 1000), 0)
+    : Math.random() * 1000; // Fallback if no embedding
   const suffix = Math.floor(hash % 999).toString().padStart(3, '0');
   
   // Tomar algunas letras del nickname (privacidad)
@@ -35,7 +37,8 @@ const generatePlanetName = (moodEntry: MoodEntryWithEmbedding, userNickname: str
 };
 
 // Calcular intensidad emocional desde embedding
-const calculateIntensity = (embedding: number[]): number => {
+const calculateIntensity = (embedding: number[] | null | undefined): number => {
+  if (!embedding || embedding.length === 0) return 1;
   const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
   return Math.min(Math.max(magnitude * 10, 1), 10);
 };
@@ -96,12 +99,12 @@ export const PlanetDetailCard: React.FC<PlanetDetailCardProps> = ({
   // Datos calculados del planeta
   const procedimalName = generatePlanetName(moodEntry, "FA"); // TODO: usar nickname real del usuario
   const intensity = calculateIntensity(moodEntry.embedding);
-  const actions = extractActions(`${moodEntry.suceso} ${moodEntry.pensamientos_automaticos || ''}`);
-  const mainThoughts = extractMainThoughts(moodEntry.pensamientos_automaticos || '');
-  const contemplativeQuestion = getContemplativeQuestion(moodEntry.id);
+  const actions = extractActions(`${moodEntry.suceso} ${moodEntry.pensamientosAutomaticos || ''}`);
+  const mainThoughts = extractMainThoughts(moodEntry.pensamientosAutomaticos || '');
+  const contemplativeQuestion = getContemplativeQuestion(moodEntry.localId);
 
   // Formatear fecha
-  const dayOfWeek = new Date(moodEntry.created_at).toLocaleDateString('es-ES', { 
+  const dayOfWeek = new Date(moodEntry.createdAtServer || '').toLocaleDateString('es-ES', { 
     weekday: 'long' 
   });
 
@@ -120,7 +123,7 @@ export const PlanetDetailCard: React.FC<PlanetDetailCardProps> = ({
     setIsSaving(true);
     try {
       await onSaveReflection({
-        mood_entry_id: moodEntry.id,
+        mood_entry_id: moodEntry.localId,
         reflection_text: reflection,
         planet_name: planetName,
         rating: rating
@@ -205,7 +208,7 @@ export const PlanetDetailCard: React.FC<PlanetDetailCardProps> = ({
                 Emociones sentidas:
               </h4>
               <div className="flex flex-wrap gap-2">
-                {moodEntry.emociones_principales?.map((emotion, index) => (
+              {moodEntry.emocionesPrincipales?.map((emotion: string, index: number) => (
                   <Badge key={index} variant="secondary" className="bg-pink-500/20 text-pink-200 border-pink-500/30">
                     {emotion}
                   </Badge>

@@ -1,7 +1,8 @@
 // src/pages/ObservatoryPage.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getWeeklyJourney, type MoodEntryWithEmbedding } from '@/services/observatoryService';
+import { getWeeklyJourney } from '@/services/observatoryService';
+import type { MoodEntryWithMetrics } from '@/types/mood';
 import { ObservatoryCanvas } from '@/components/observatory/ObservatoryCanvas';
 import { Loader2, Telescope, Sparkles, Calendar, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,10 +32,10 @@ const ObservatoryLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 // Componente principal 
 export function ObservatoryPage() {
   const { user } = useAuth();
-  const [journeyData, setJourneyData] = useState<MoodEntryWithEmbedding[]>([]);
+  const [journeyData, setJourneyData] = useState<MoodEntryWithMetrics[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedEntry, setSelectedEntry] = useState<MoodEntryWithEmbedding | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<MoodEntryWithMetrics | null>(null);
 
   // Lógica de carga
   const loadJourneyData = useCallback(async () => {
@@ -65,8 +66,8 @@ export function ObservatoryPage() {
   }, [loadJourneyData]);
 
   // Handlers
-  const handlePlanetClick = useCallback((entry: MoodEntryWithEmbedding) => {
-    console.log('[ObservatoryPage] Planet clicked:', entry.id);
+  const handlePlanetClick = useCallback((entry: MoodEntryWithMetrics) => {
+    console.log('[ObservatoryPage] Planet clicked:', entry.localId); // Cambiado de entry.id a entry.localId
     setSelectedEntry(entry);
   }, []);
 

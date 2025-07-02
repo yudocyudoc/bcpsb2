@@ -2,12 +2,12 @@
 import { useCallback, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stars, Text } from '@react-three/drei'
-import { OrganicPulse } from './OrganicPulse' // ← Nuevo componente
-import type { MoodEntryWithEmbedding } from '@/services/observatoryService'
+import { OrganicPulse } from './OrganicPulse'
+import type { MoodEntryWithMetrics } from '@/types/mood'
 
 interface ObservatoryCanvasProps {
-  journeyData?: MoodEntryWithEmbedding[]
-  onPlanetClick?: (entry: MoodEntryWithEmbedding) => void
+  journeyData?: MoodEntryWithMetrics[]
+  onPlanetClick?: (entry: MoodEntryWithMetrics) => void
 }
 
 export function ObservatoryCanvas({ journeyData = [], onPlanetClick }: ObservatoryCanvasProps) {
@@ -26,8 +26,8 @@ export function ObservatoryCanvas({ journeyData = [], onPlanetClick }: Observato
     })
   }, [journeyData])
 
-  const handlePulseClick = useCallback((entry: MoodEntryWithEmbedding) => {
-    console.log('Pulse clicked:', entry.id)
+  const handlePulseClick = useCallback((entry: MoodEntryWithMetrics) => {
+    console.log('Pulse clicked:', entry.localId) // Cambiado de entry.id a entry.localId
     onPlanetClick?.(entry)
   }, [onPlanetClick])
 
@@ -56,10 +56,10 @@ export function ObservatoryCanvas({ journeyData = [], onPlanetClick }: Observato
       {/* Pulsos emocionales orgánicos */}
       {journeyData.map((entry, index) => (
         <OrganicPulse
-          key={entry.id}
+          key={entry.localId} // Cambiado de entry.id a entry.localId
           entry={entry}
           position={pulsePositions[index]}
-          onClicked={handlePulseClick}
+          onClick={handlePulseClick} // Cambiado de onClicked a onClick
         />
       ))}
       
