@@ -3,16 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Brain, AlertCircle, Activity } from 'lucide-react';
+import { EmbeddingTestCase } from '@/types/embeddingLab';
 
-interface EmbeddingTestCase {
-  id: string;
-  user_id: string;
-  created_at: string;
-  suceso: string;
-  emociones_principales: string[];
-  pensamientos_automaticos: string;
-  embedding: number[];
-}
+
+
 
 interface TestCasesListProps {
   testCases: EmbeddingTestCase[];

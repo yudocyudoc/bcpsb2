@@ -1,12 +1,40 @@
 // src/services/observatoryService.ts
 import { supabase } from '@/supabase/client';
-import type { MoodEntrySupabaseRow } from '@/types/mood';
+import type { MoodEntryWithMetrics, MoodEntrySupabaseRow } from '@/types/mood';
 
-export interface MoodEntryWithEmbedding extends Omit<MoodEntrySupabaseRow, 'embedding'> {
+// Modified interface to omit the embedding field from the base type
+interface MoodEntryWithEmbedding extends Omit<MoodEntrySupabaseRow, 'embedding'> {
   embedding: number[];
 }
 
-export async function getWeeklyJourney(userId: string): Promise<MoodEntryWithEmbedding[]> {
+// Función helper para convertir de formato Supabase a Frontend
+function convertToFrontendFormat(entry: MoodEntryWithEmbedding): MoodEntryWithMetrics {
+  return {
+    localId: entry.id,
+    serverId: entry.id,
+    userId: entry.user_id,
+    suceso: entry.suceso,
+    selectedContexts: entry.selected_contexts,
+    emocionesPrincipales: entry.emociones_principales,
+    subEmociones: entry.sub_emociones as any,
+    otrasEmocionesCustom: entry.otras_emociones_custom as any,
+    intensidades: entry.intensidades as any,
+    duracion: entry.duracion,
+    duracionesIndividuales: entry.duraciones_individuales as any,
+    pensamientosAutomaticos: entry.pensamientos_automaticos,
+    creenciasSubyacentes: entry.creencias_subyacentes,
+    createdAtClient: new Date(entry.created_at).getTime(),
+    createdAtServer: entry.created_at,
+    syncStatus: 'synced',
+    embedding: entry.embedding,
+    pulse_intensity: Math.random() * 0.5 + 0.5,
+    pulse_complexity: Math.random() * 0.5 + 0.5,
+    pulse_duration_factor: Math.random() * 0.5 + 0.5,
+    pulse_valence: Math.random() * 0.5 + 0.5
+  };
+}
+
+export async function getWeeklyJourney(userId: string): Promise<MoodEntryWithMetrics[]> {
   if (!userId) {
     console.warn('[ObservatoryService] No userId provided, returning empty array.');
     return [];
@@ -85,5 +113,5 @@ export async function getWeeklyJourney(userId: string): Promise<MoodEntryWithEmb
     .filter((entry): entry is MoodEntryWithEmbedding => entry !== null);
 
   console.log(`[ObservatoryService] Final processed entries: ${entriesWithEmbeddings.length}`);
-  return entriesWithEmbeddings;
+  return entriesWithEmbeddings.map(convertToFrontendFormat);
 }

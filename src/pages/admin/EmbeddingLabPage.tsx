@@ -6,8 +6,11 @@ import { ROLES } from '@/config/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Beaker, ChevronLeft, Loader2, Brain } from 'lucide-react';
+import { Beaker, ChevronLeft, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+import { EmbeddingLabTabs } from '@/components/admin/embedding-lab/EmbeddingLabTabs';
+
 
 // Importar servicios
 import { 
@@ -16,18 +19,15 @@ import {
   clearAllTestCases 
 } from '@/services/embeddingTestService';
 
-// Importar componentes modulares
-import { EmbeddingStats } from '@/components/admin/embedding-lab/EmbeddingStats';
-import { TestCaseManager } from '@/components/admin/embedding-lab/TestCaseManager';
-import { TestCasesList } from '@/components/admin/embedding-lab/TestCasesList';
-import { TextAnalyzer } from '@/components/admin/embedding-lab/TextAnalyzer';
-import { SimilarityResults } from '@/components/admin/embedding-lab/SimilarityResults';
-import { EmbeddingDisplay } from '@/components/admin/embedding-lab/EmbeddingDisplay';
-import { EmbeddingInsights } from '@/components/admin/embedding-lab/EmbeddingInsights';
-import { EmbeddingTestCase, TestCaseStats, SimilarityResult, AnalyzeEmbeddingResponse } from '@/types/embeddingLab';
+
+
+
+import { EmbeddingTestCase, TestCaseStats, SimilarityResult } from '@/types/embeddingLab';
+
+
 
 export function EmbeddingLabPage() {
-  const { profile, user } = useAuth();
+  const { profile } = useAuth();
   const navigate = useNavigate();
   
   // Estados principales
@@ -78,11 +78,17 @@ export function EmbeddingLabPage() {
       }
 
       const processedCases: EmbeddingTestCase[] = data
-        .map(entry => {
-          try {
-            const embedding = typeof entry.embedding === 'string' 
-              ? JSON.parse(entry.embedding)
-              : entry.embedding;
+      .map((entry: any) => {
+        try {
+            const embeddingData = entry.embedding;
+            if (!embeddingData) {
+              console.warn(`No embedding data for entry ${entry.id}`);
+              return null;
+            }
+
+            const embedding = typeof embeddingData === 'string' 
+              ? JSON.parse(embeddingData)
+              : embeddingData;
               
             if (!Array.isArray(embedding) || embedding.length === 0) {
               console.warn(`Invalid embedding for entry ${entry.id}`);
@@ -90,14 +96,14 @@ export function EmbeddingLabPage() {
             }
 
             return {
-              id: entry.id,
-              user_id: entry.user_id,
-              created_at: entry.created_at,
-              suceso: entry.suceso || '',
-              emociones_principales: entry.emociones_principales || [],
-              pensamientos_automaticos: entry.pensamientos_automaticos || '',
-              embedding: embedding
-            };
+                id: entry.id,
+                user_id: entry.user_id,
+                created_at: entry.created_at,
+                suceso: entry.suceso || '',
+                emociones_principales: entry.emociones_principales || [],
+                pensamientos_automaticos: entry.pensamientos_automaticos || '',
+                embedding: embedding
+              };
           } catch (e) {
             console.warn(`Error processing entry ${entry.id}:`, e);
             return null;
@@ -167,70 +173,61 @@ export function EmbeddingLabPage() {
   }, [loadStats]);
 
   // Analizar similitudes usando la Edge Function
-  const analyzeText = useCallback(async () => {
+ // Reemplazar toda la función analyzeText con esto:
+const analyzeText = useCallback(async () => {
     if (!newText.trim()) {
       toast.error('Por favor ingresa un texto para analizar');
       return;
     }
-
+  
     if (testCases.length === 0) {
       toast.error('No hay casos de prueba disponibles para comparar');
       return;
     }
-
+  
     setIsAnalyzing(true);
     setSimilarities([]);
     setNewEmbedding(null);
-
+  
     try {
-      const referenceTexts = testCases.map(testCase => {
-        const combinedText = [
-          testCase.suceso,
-          testCase.pensamientos_automaticos,
-          testCase.emociones_principales.join(', ')
-        ].filter(Boolean).join(' | ');
-        
-        return combinedText;
-      });
-
-      const { data, error } = await supabase.functions.invoke('analyze-embedding', {
+      // Primero obtener embedding del texto nuevo
+      const { data: newEmbeddingData, error: newError } = await supabase.functions.invoke('analyze-embedding', {
         body: {
-          new_text: newText.trim(),
-          reference_texts: referenceTexts
+          mode: 'single',
+          text1: newText.trim()
         }
       });
-
-      if (error) {
-        console.error('Edge function error:', error);
-        toast.error('Error al llamar al servicio de análisis');
-        return;
+  
+      if (newError || !newEmbeddingData.success) {
+        throw new Error('Error obteniendo embedding del texto nuevo');
       }
-
-      const response = data as AnalyzeEmbeddingResponse;
-      
-      if (!response.success) {
-        console.error('Analysis failed:', response.error);
-        toast.error(`Error en el análisis: ${response.error}`);
-        return;
-      }
-
-      if (response.similarities) {
-        const processedSimilarities: SimilarityResult[] = response.similarities.map((sim, index) => ({
+  
+      const newEmbedding = newEmbeddingData.embedding;
+      setNewEmbedding(newEmbedding);
+  
+      // Calcular similitudes localmente con los embeddings existentes
+      const similarities: SimilarityResult[] = testCases.map((testCase) => {
+        // Función de similitud coseno local
+        const cosineSimilarity = (a: number[], b: number[]): number => {
+          const dotProduct = a.reduce((sum, ai, i) => sum + ai * b[i], 0);
+          const magnitudeA = Math.sqrt(a.reduce((sum, ai) => sum + ai * ai, 0));
+          const magnitudeB = Math.sqrt(b.reduce((sum, bi) => sum + bi * bi, 0));
+          return dotProduct / (magnitudeA * magnitudeB);
+        };
+  
+        const similarity = cosineSimilarity(newEmbedding, testCase.embedding);
+        
+        return {
           text1: newText.trim(),
-          text2: referenceTexts[index] || `Caso ${index + 1}`,
-          similarity: sim.similarity,
-          distance: sim.distance
-        }));
-
-        setSimilarities(processedSimilarities);
-      }
-
-      if (response.new_embedding) {
-        setNewEmbedding(response.new_embedding);
-      }
-
-      toast.success(`Análisis completado. ${response.similarities?.length || 0} comparaciones realizadas.`);
-
+          text2: `${testCase.suceso} (${testCase.emociones_principales.join(', ')})`,
+          similarity: Number((similarity * 100).toFixed(1)),
+          distance: Number((1 - similarity).toFixed(3))
+        };
+      });
+  
+      setSimilarities(similarities);
+      toast.success(`✅ Análisis completado. ${similarities.length} comparaciones realizadas.`);
+  
     } catch (error) {
       console.error('Error analyzing text:', error);
       toast.error('Error inesperado durante el análisis');
@@ -284,45 +281,27 @@ export function EmbeddingLabPage() {
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <>
-          {/* Componentes modulares */}
-          <EmbeddingStats stats={stats} />
-          
-          <TestCaseManager
-            isCreatingCases={isCreatingCases}
-            isClearingCases={isClearingCases}
-            isLoadingData={isLoading}
-            onCreateAdditionalCases={handleCreateAdditionalCases}
-            onReloadData={loadTestCases}
-            onClearAllCases={handleClearAllCases}
-          />
-          
-          <TestCasesList testCases={testCases} />
-          
-          <TextAnalyzer
-            newText={newText}
-            isAnalyzing={isAnalyzing}
-            hasTestCases={testCases.length > 0}
-            onTextChange={setNewText}
-            onAnalyze={analyzeText}
-          />
-          
-          <SimilarityResults similarities={similarities} />
-          
-          <EmbeddingDisplay embedding={newEmbedding} />
+    
+       
+) : (
+    <EmbeddingLabTabs
+      stats={stats}
+      testCases={testCases}
+      isCreatingCases={isCreatingCases}
+      isClearingCases={isClearingCases}
+      isLoadingData={isLoading}
+      onCreateAdditionalCases={handleCreateAdditionalCases}
+      onReloadData={loadTestCases}
+      onClearAllCases={handleClearAllCases}
+      newText={newText}
+      isAnalyzing={isAnalyzing}
+      similarities={similarities}
+      newEmbedding={newEmbedding}
+      onTextChange={setNewText}
+      onAnalyze={analyzeText}
+    />
 
-          {/* Insights avanzados */}
-          {testCases.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Brain className="h-5 w-5" />
-                Análisis Avanzado de Embeddings
-              </h2>
-              <EmbeddingInsights testCases={testCases} />
-            </div>
-          )}
-        </>
+
       )}
     </div>
   );

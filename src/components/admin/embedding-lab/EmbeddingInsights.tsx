@@ -1,31 +1,62 @@
 // src/components/admin/embedding-lab/EmbeddingInsights.tsx
-import  { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
   TrendingUp, 
-   Brain,
+  Brain,
   BarChart3,
   Activity,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react';
-
-interface EmbeddingTestCase {
-  id: string;
-  user_id: string;
-  created_at: string;
-  suceso: string;
-  emociones_principales: string[];
-  pensamientos_automaticos: string;
-  embedding: number[];
-}
+import { EmbeddingTestCase } from '@/types/embeddingLab';
+import { ContextEmotionHeatmap } from './ContextEmotionHeatmap';
+import { ThoughtFlowGraph } from './ThoughtFlowGraph';
+import { TemporalDurationVisualization } from './TemporalDurationVisualization';
+import { supabase } from '@/supabase/client';
+import { toast } from 'sonner';
 
 interface EmbeddingInsightsProps {
   testCases: EmbeddingTestCase[];
 }
 
 export function EmbeddingInsights({ testCases }: EmbeddingInsightsProps) {
+  const [allUserEntries, setAllUserEntries] = useState<any[]>([]);
+  const [isLoadingEntries, setIsLoadingEntries] = useState(true);
+
+  // Cargar TODAS las entradas de TODOS los usuarios para el heatmap (admin view)
+  useEffect(() => {
+    const loadAllEntries = async () => {
+      try {
+        setIsLoadingEntries(true);
+        
+        // Como es vista de admin, cargamos TODAS las entradas de TODOS los usuarios
+        const { data, error } = await supabase
+          .from('mood_entries')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1000); // Limitar para no sobrecargar
+
+        if (error) {
+          console.error('Error loading all entries:', error);
+          toast.error('Error al cargar datos para el mapa de calor');
+          return;
+        }
+
+        console.log(`[Admin View] Loaded ${data?.length || 0} total entries from all users`);
+        setAllUserEntries(data || []);
+      } catch (error) {
+        console.error('Error in loadAllEntries:', error);
+      } finally {
+        setIsLoadingEntries(false);
+      }
+    };
+
+    loadAllEntries();
+  }, []);
+
   const insights = useMemo(() => {
     if (testCases.length === 0) return null;
 
@@ -111,6 +142,48 @@ export function EmbeddingInsights({ testCases }: EmbeddingInsightsProps) {
 
   return (
     <div className="space-y-6">
+      {/* Mapa de Calor Contexto-Emoción */}
+      {isLoadingEntries ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Cargando datos para mapa de calor...</span>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <ContextEmotionHeatmap entries={allUserEntries} />
+      )}
+
+      {/* Grafo de Flujo de Pensamientos */}
+      {isLoadingEntries ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Cargando datos para grafo de pensamientos...</span>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <ThoughtFlowGraph entries={allUserEntries} />
+      )}
+
+      {/* Visualización de Duración Temporal */}
+      {isLoadingEntries ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Cargando datos temporales...</span>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <TemporalDurationVisualization entries={allUserEntries} />
+      )}
+
       {/* Resumen de magnitudes */}
       <Card>
         <CardHeader>

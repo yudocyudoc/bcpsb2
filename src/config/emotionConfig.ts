@@ -23,16 +23,16 @@ export const emotionsList: string[] = [
 // Jerarquía de sub-emociones (opcional, puedes expandir esto)
 // Las claves deben coincidir con los strings en `emotionsList`
 export const emotionHierarchy: EmotionHierarchy = {
-  "Triste": ["Melancólico/a", "Desanimado/a", "Decepcionado/a", "Solitario/a"],
-  "Enojo": ["Irritado/a", "Frustrado/a", "Resentido/a"],
-  "Miedo": ["Nervioso/a", "Preocupado/a", "Inseguro/a"],
-  "Ansiedad": ["Inquieto/a", "Tenso/a", "Agitado/a"],
-  "Vergüenza": ["Avergonzado/a", "Humillado/a"],
-  "Culpa": ["Arrepentido/a"],
-  "Alegría": ["Contento/a", "Optimista", "Agradecido/a", "Aliviado/a"],
-  "Interés": ["Curioso/a", "Entusiasmado/a"],
-  "Sorpresa": ["Asombrado/a", "Confundido/a"],
-  "Amor": ["Cariñoso/a", "Compasivo/a"],
+  "Triste": ["Melancólica", "Desanimada", "Decepcionada", "Solitaria"],
+  "Enojo": ["Irritada", "Frustrada", "Resentida"],
+  "Miedo": ["Nerviosa", "Preocupada", "Insegura"],
+  "Ansiedad": ["Inquieta", "Tensa", "Agitada"],
+  "Vergüenza": ["Avergonzada", "Humillada"],
+  "Culpa": ["Arrepentida"],
+  "Alegría": ["Contenta", "Optimista", "Agradecida", "Aliviada"],
+  "Interés": ["Curiosa", "Entusiasmada"],
+  "Sorpresa": ["Asombrada", "Confundida"],
+  "Amor": ["Cariñosa", "Compasiva"],
   "Otra(s)": [] // "Otra(s)" no tiene sub-emociones predefinidas, se escriben
 };
 

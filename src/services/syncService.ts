@@ -17,6 +17,8 @@ async function createMoodEntryInSupabase(
       sub_emociones: entryData.sub_emociones,
       otras_emociones_custom: entryData.otras_emociones_custom,
       intensidades: entryData.intensidades,
+      duracion: entryData.duracion,
+      duraciones_individuales: entryData.duraciones_individuales,
       pensamientos_automaticos: entryData.pensamientos_automaticos,
       creencias_subyacentes: entryData.creencias_subyacentes
     })
@@ -72,6 +74,8 @@ export async function syncPendingMoodEntries(): Promise<{ successCount: number; 
             ? localEntry.otrasEmocionesCustom
             : (localEntry.otrasEmocionesCustom || []),
           intensidades: localEntry.intensidades || {},
+          duracion: localEntry.duracion,
+          duraciones_individuales: localEntry.duracionesIndividuales,
           pensamientos_automaticos: localEntry.pensamientosAutomaticos || '',
           creencias_subyacentes: localEntry.creenciasSubyacentes || ''
         };

@@ -2,14 +2,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp } from 'lucide-react';
 
-interface TestCaseStats {
-  total: number;
-  withEmbeddings: number;
-  withoutEmbeddings: number;
-  categories: number;
-  uniqueEmotions: number;
-  entries: any[];
-}
+import { TestCaseStats } from '@/types/embeddingLab';
+
 
 interface EmbeddingStatsProps {
   stats: TestCaseStats | null;

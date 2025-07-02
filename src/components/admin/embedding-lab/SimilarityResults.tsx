@@ -2,39 +2,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { BarChart3 } from 'lucide-react';
-
-interface SimilarityResult {
-  text1: string;
-  text2: string;
-  similarity: number;
-  distance: number;
-}
+import { BarChart3, TrendingUp } from 'lucide-react';
+import { SimilarityResult } from '@/types/embeddingLab';
+import { SimilarityCalibrator } from './SimilarityCalibrator';
 
 interface SimilarityResultsProps {
   similarities: SimilarityResult[];
 }
 
-// Función para obtener el color de similitud
-const getSimilarityColor = (similarity: number): string => {
-  if (similarity >= 0.8) return 'bg-green-500';
-  if (similarity >= 0.6) return 'bg-yellow-500';
-  if (similarity >= 0.4) return 'bg-orange-500';
-  return 'bg-red-500';
-};
-
-// Función para obtener el texto de interpretación
-const getSimilarityInterpretation = (similarity: number): string => {
-  if (similarity >= 0.8) return 'Muy similar';
-  if (similarity >= 0.6) return 'Similar';
-  if (similarity >= 0.4) return 'Moderadamente similar';
-  return 'Poco similar';
-};
-
 export function SimilarityResults({ similarities }: SimilarityResultsProps) {
   if (similarities.length === 0) {
     return null;
   }
+
+  // Calcular estadísticas para posible normalización futura
+  const similarityValues = similarities.map(s => s.similarity * 100);
+  const avgSimilarity = similarityValues.reduce((a, b) => a + b, 0) / similarityValues.length;
+  const maxSimilarity = Math.max(...similarityValues);
+  const minSimilarity = Math.min(...similarityValues);
 
   return (
     <Card>
@@ -45,62 +30,107 @@ export function SimilarityResults({ similarities }: SimilarityResultsProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Resumen estadístico */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="h-4 w-4 text-gray-600" />
+            <h3 className="text-sm font-medium text-gray-700">Resumen de Análisis</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div>
+              <span className="text-gray-500">Promedio:</span>
+              <div className="font-mono font-medium">{avgSimilarity.toFixed(1)}%</div>
+            </div>
+            <div>
+              <span className="text-gray-500">Máximo:</span>
+              <div className="font-mono font-medium">{maxSimilarity.toFixed(1)}%</div>
+            </div>
+            <div>
+              <span className="text-gray-500">Mínimo:</span>
+              <div className="font-mono font-medium">{minSimilarity.toFixed(1)}%</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Resultados individuales */}
         <div className="space-y-3">
-          {similarities.map((result, index) => (
-            <div key={index} className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <Badge variant="outline">
-                  Comparación con Caso {index + 1}
-                </Badge>
-                <Badge 
-                  className={`text-white ${getSimilarityColor(result.similarity)}`}
-                >
-                  {getSimilarityInterpretation(result.similarity)}
-                </Badge>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <strong>Similitud coseno:</strong>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+          {similarities.map((result, index) => {
+            const similarityPercentage = result.similarity * 100;
+            
+            return (
+              <div key={index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <Badge variant="outline" className="text-xs">
+                    Comparación con Caso {index + 1}
+                  </Badge>
+                  <SimilarityCalibrator 
+                    similarity={similarityPercentage}
+                    showTooltip={true}
+                    showPercentage={true}
+                  />
+                </div>
+                
+                {/* Visualización mejorada de similitud */}
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium">Similitud coseno</span>
+                      <span className="font-mono text-sm">{similarityPercentage.toFixed(1)}%</span>
+                    </div>
+                    <div className="relative">
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-500"
+                          style={{ width: `${similarityPercentage}%` }}
+                        />
+                      </div>
+                      {/* Marcador del promedio */}
                       <div 
-                        className={`h-2 rounded-full ${getSimilarityColor(result.similarity)}`}
-                        style={{ width: `${result.similarity * 100}%` }}
+                        className="absolute top-0 h-2 w-px bg-gray-600"
+                        style={{ left: `${avgSimilarity}%` }}
+                        title={`Promedio: ${avgSimilarity.toFixed(1)}%`}
                       />
                     </div>
-                    <span className="font-mono">
-                      {(result.similarity * 100).toFixed(1)}%
-                    </span>
+                  </div>
+                  
+                  <div className="text-sm text-gray-600">
+                    <strong>Distancia euclidiana:</strong>
+                    <span className="font-mono ml-2">{result.distance.toFixed(4)}</span>
                   </div>
                 </div>
                 
-                <div>
-                  <strong>Distancia euclidiana:</strong>
-                  <div className="font-mono mt-1">
-                    {result.distance.toFixed(4)}
+                <Separator className="my-3" />
+                
+                {/* Textos comparados */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-gray-700">Texto analizado:</div>
+                    <p className="text-sm text-gray-600 italic line-clamp-2">
+                      "{result.text1}"
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-xs font-medium text-gray-700">Texto de referencia:</div>
+                    <p className="text-sm text-gray-600 italic line-clamp-2">
+                      "{result.text2}"
+                    </p>
                   </div>
                 </div>
-              </div>
-              
-              <Separator className="my-3" />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                <div>
-                  <strong>Texto analizado:</strong>
-                  <p className="text-muted-foreground mt-1 italic">
-                    "{result.text1}"
-                  </p>
-                </div>
-                <div>
-                  <strong>Texto de referencia:</strong>
-                  <p className="text-muted-foreground mt-1 italic">
-                    "{result.text2}"
+
+                {/* Interpretación contextual */}
+                <div className="mt-3 p-3 bg-blue-50 rounded-md">
+                  <p className="text-xs text-blue-800">
+                    <strong>Esto significa que:</strong> Los textos tienen una{' '}
+                    {similarityPercentage >= 75 ? 'alta' : similarityPercentage >= 50 ? 'moderada' : 'baja'}{' '}
+                    similitud semántica. 
+                    {similarityPercentage >= 75 && ' Es probable que ambos textos aborden situaciones emocionales muy parecidas.'}
+                    {similarityPercentage >= 50 && similarityPercentage < 75 && ' Existe una conexión temática, aunque con diferencias notables.'}
+                    {similarityPercentage < 50 && ' Los textos parecen referirse a experiencias o contextos bastante diferentes.'}
                   </p>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

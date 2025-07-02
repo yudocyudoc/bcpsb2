@@ -18,6 +18,7 @@ import type {
   EmotionIntensities,
 } from '@/types/mood';
 
+
 // --- Configuración de Emociones ---
 import { emotionHierarchy, emotionsList } from '@/config/emotionConfig';
 
@@ -35,11 +36,11 @@ type MoodTrackerStepperFormProps = React.HTMLAttributes<HTMLDivElement>;
 export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepperFormProps) {
   const { user, isLoading: authLoading } = useAuth();
   const formWrapperRef = useRef<HTMLDivElement>(null);
-  
+
   // 🔧 FIX 1: Ref para prevenir múltiples submissions
   const submissionInProgressRef = useRef(false);
   const lastSubmissionIdRef = useRef<string | null>(null);
-  
+
   // 🔧 FIX 2: Ref para controlar sync
   const syncInProgressRef = useRef(false);
   const mountedRef = useRef(true);
@@ -57,10 +58,18 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
   const [selectedSubEmotions, setSelectedSubEmotions] = useState<SelectedSubEmotions>({});
   const [otherEmotions, setOtherEmotions] = useState<OtherEmotions>({});
   const [emotionIntensities, setEmotionIntensities] = useState<EmotionIntensities>({});
+
+
+  const [duracion, setDuracion] = useState<string>('');
+  const [showIndividualDurations, setShowIndividualDurations] = useState<boolean>(false); // ← AGREGAR
+  const [individualDurations, setIndividualDurations] = useState<Record<string, string>>({}); // ← AGREGAR
+
+
+
   const [pensamientosText, setPensamientosText] = useState<string>("");
   const [creenciasText, setCreenciasText] = useState<string>("");
   const [selectedContexts, setSelectedContexts] = useState<string[]>([]);
-  
+
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [previousEntries, setPreviousEntries] = useState<MoodEntry[]>([]);
   const [isLoadingEntries, setIsLoadingEntries] = useState<boolean>(true);
@@ -75,7 +84,7 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
       setPreviousEntries([]);
       return;
     }
-    
+
     try {
       const entriesData = await getUserMoodEntriesLocal(user.id, 20); // Fetch more to ensure comprehensive deduplication
       if (mountedRef.current) {
@@ -104,17 +113,17 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
 
       syncInProgressRef.current = true;
       setIsLoadingEntries(true);
-      
+
       try {
         await syncPendingMoodEntries();
         const remoteEntries = await fetchRecentMoodEntriesFromSupabase(user.id, 20);
-        
+
         if (remoteEntries.length > 0) {
           await syncSupabaseEntriesToLocal(remoteEntries);
         }
-        
+
         const localEntries = await getUserMoodEntriesLocal(user.id, 10);
-        
+
         if (isMounted) {
           setPreviousEntries(localEntries);
         }
@@ -150,7 +159,7 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
       toast.error("Selecciona al menos una emoción.");
       return;
     }
-    
+
     if (currentStep === 2) {
       const allEmotionsToRateSet = new Set<string>();
       selectedEmotions.forEach((emotion) => {
@@ -162,14 +171,14 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
           allEmotionsToRateSet.add(otherEmotions[emotion].trim());
         }
       });
-      
+
       const newIntensities = { ...emotionIntensities };
       allEmotionsToRateSet.forEach(emotionKey => {
         if (!(emotionKey in newIntensities)) newIntensities[emotionKey] = 50;
       });
       setEmotionIntensities(newIntensities);
     }
-    
+
     setCurrentStep((prev) => {
       const nextStep = Math.min(prev + 1, 4);
       if (nextStep !== prev) scrollToTop();
@@ -207,7 +216,7 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
             allEmotionsToRateSet.add(otherEmotions[emotion].trim());
           }
         });
-        
+
         const newIntensities = { ...emotionIntensities };
         allEmotionsToRateSet.forEach(emotionKey => {
           if (!(emotionKey in newIntensities)) newIntensities[emotionKey] = 50;
@@ -260,12 +269,32 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
     setEmotionIntensities((prev) => ({ ...prev, [emotionKey]: value }));
   }, []);
 
+  const handleDuracionChange = useCallback((duration: string) => {
+    setDuracion(duration);
+  }, []);
+
+  const handleShowIndividualDurationsChange = useCallback((show: boolean) => {
+    setShowIndividualDurations(show);
+  }, []); // ← AGREGAR
+
+  const handleIndividualDurationChange = useCallback((emotion: string, duration: string) => {
+    setIndividualDurations(prev => ({
+      ...prev,
+      [emotion]: duration
+    }));
+  }, []);
+
+
+
   const resetForm = useCallback(() => {
     setSucesoText("");
     setSelectedEmotions([]);
     setSelectedSubEmotions({});
     setOtherEmotions({});
     setEmotionIntensities({});
+    setDuracion('');
+    setShowIndividualDurations(false);
+    setIndividualDurations({});
     setPensamientosText("");
     setCreenciasText("");
     setSelectedContexts([]);
@@ -285,7 +314,7 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
   // 🔧 FIX 5: handleSubmit optimizado para prevenir duplicaciones
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     // Prevenir múltiples submissions
     if (submissionInProgressRef.current || isSaving) {
       console.log("Submission already in progress, ignoring duplicate");
@@ -324,6 +353,8 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
       subEmociones: selectedSubEmotions,
       otrasEmocionesCustom: otherEmotions,
       intensidades: emotionIntensities,
+      duracion: duracion || null,
+      duracionesIndividuales: Object.keys(individualDurations).length > 0 ? individualDurations : null,
       pensamientosAutomaticos: pensamientosText,
       creenciasSubyacentes: creenciasText,
       createdAtClient: clientTimestamp,
@@ -335,13 +366,13 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
       // Guardar localmente
       await saveMoodEntryLocal(newMoodEntry);
       console.log(`Successfully saved entry ${newLocalId} locally`);
-      
+
       if (mountedRef.current) {
         toast.success("Registro guardado localmente.");
-        
+
         // Recargar entries
         await loadUserEntriesFromLocal();
-        
+
         // Actualizar estado del formulario
         setLastSubmissionData(newMoodEntry);
         setFormStatus('submitted');
@@ -403,25 +434,34 @@ export function MoodTrackerStepperForm({ className, ...props }: MoodTrackerStepp
       case 3:
         return (
           <Step3Intensidad
-            selectedEmotions={selectedEmotions}
-            selectedSubEmotions={selectedSubEmotions}
-            otherEmotions={otherEmotions}
-            emotionIntensities={emotionIntensities}
-            onIntensityChange={handleIntensityChange}
-            onPrev={handlePrevStep}
-            onNext={handleNextStep}
-          />
+          selectedEmotions={selectedEmotions}
+          selectedSubEmotions={selectedSubEmotions}
+          otherEmotions={otherEmotions}
+          emotionIntensities={emotionIntensities}
+          onIntensityChange={handleIntensityChange}
+          duracion={duracion}
+          onDuracionChange={handleDuracionChange}
+          showIndividualDurations={showIndividualDurations} // ← AGREGAR
+          onShowIndividualDurationsChange={handleShowIndividualDurationsChange} // ← AGREGAR
+          individualDurations={individualDurations} // ← AGREGAR
+          onIndividualDurationChange={handleIndividualDurationChange} // ← AGREGAR
+          onPrev={handlePrevStep}
+          onNext={handleNextStep}
+        />
         );
-      case 4:
-        const formDataSummary = {
-          sucesoText,
-          selectedEmotions,
-          selectedSubEmotions,
-          otherEmotions,
-          emotionIntensities,
-          pensamientosText,
-          creenciasText,
-        };
+        case 4:
+          const formDataSummary = {
+            sucesoText,
+            selectedEmotions,
+            selectedSubEmotions,
+            otherEmotions,
+            emotionIntensities,
+            duracion,
+            showIndividualDurations, // ← AGREGAR
+            individualDurations, // ← AGREGAR
+            pensamientosText,
+            creenciasText,
+          };
         return (
           <Step4Pensamientos
             pensamientosText={pensamientosText}

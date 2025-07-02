@@ -19,6 +19,8 @@ export interface MoodEntry {
   subEmociones: SelectedSubEmotions | null;
   otrasEmocionesCustom: OtherEmotions | null;
   intensidades: EmotionIntensities | null;
+  duracion?: string | null;
+  duracionesIndividuales?: Record<string, string> | null;
   pensamientosAutomaticos: string | null;
   creenciasSubyacentes: string | null;
   createdAtClient: number;
@@ -28,6 +30,10 @@ export interface MoodEntry {
   syncError?: string | null;
   planet_image_url?: string | null;
   embedding?: number[] | null;  // Frontend siempre usa number[]
+  pulse_intensity?: number;
+  pulse_complexity?: number;
+  pulse_duration_factor?: number;
+  pulse_valence?: number;
 }
 
 // --- TIPO #2: Una fila COMPLETA como viene de Supabase (snake_case) ---
@@ -42,6 +48,8 @@ export interface MoodEntrySupabaseRow {
   sub_emociones: unknown; // 'unknown' es más seguro para jsonb
   otras_emociones_custom: unknown;
   intensidades: unknown;
+  duracion: string | null;
+  duraciones_individuales: unknown;
   pensamientos_automaticos: string | null;
   creencias_subyacentes: string | null;
   embedding: string | null;
@@ -58,6 +66,15 @@ export interface MoodEntrySupabaseInsert {
   sub_emociones: Json;
   otras_emociones_custom: Json;
   intensidades: Json;
+  duracion?: string | null;
+  duraciones_individuales?: Json;
   pensamientos_automaticos: string;
   creencias_subyacentes: string;
+}
+
+export interface MoodEntryWithMetrics extends MoodEntry {
+  pulse_intensity?: number;
+  pulse_complexity?: number;
+  pulse_duration_factor?: number;
+  pulse_valence?: number;
 }

@@ -4,8 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { SelectedSubEmotions, OtherEmotions, EmotionIntensities } from '@/types/mood'; 
+import type { SelectedSubEmotions, OtherEmotions, EmotionIntensities } from '@/types/mood';
 import { ArrowLeft, Save } from 'lucide-react';
+
+import { getDurationLabel } from '@/config/durationConfig';
+
 
 interface FormDataSummary {
   sucesoText: string;
@@ -13,6 +16,9 @@ interface FormDataSummary {
   selectedSubEmotions: SelectedSubEmotions;
   otherEmotions: OtherEmotions;
   emotionIntensities: EmotionIntensities;
+  duracion: string;
+  showIndividualDurations: boolean;
+  individualDurations: Record<string, string>;
   pensamientosText: string; // Incluir pensamientos y creencias en el resumen
   creenciasText: string;
 }
@@ -43,13 +49,15 @@ export const Step4Pensamientos: React.FC<Step4PensamientosProps> = ({
     selectedSubEmotions,
     otherEmotions,
     emotionIntensities,
+    showIndividualDurations,
+    individualDurations,
     // pensamientosText y creenciasText ya los tenemos como props directos
   } = formDataSummary;
 
   return (
     <div id="step-content-4" className="space-y-6 animate-fade-in">
       <h2 className="text-xl sm:text-2xl font-bold mb-2">Paso 4: Reflexiona y Guarda</h2>
-      
+
       <div className="grid gap-6">
         <div className="grid gap-2">
           <Label htmlFor="pensamientos-text" className="text-sm sm:text-base">
@@ -85,30 +93,49 @@ export const Step4Pensamientos: React.FC<Step4PensamientosProps> = ({
             <CardTitle className="text-base sm:text-lg">Resumen de tu Registro:</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-xs sm:text-sm pb-4">
+
             <p>
               <strong>Suceso:</strong> {sucesoText || <span className="italic text-muted-foreground">No descrito</span>}
             </p>
+            {formDataSummary.duracion && (
+              <p>
+                <strong>Duración:</strong> <span className="text-muted-foreground">{getDurationLabel(formDataSummary.duracion)}</span>
+              </p>
+            )}
             <div>
               <strong>Emociones e Intensidad:</strong>
+
               {selectedEmotions.length > 0 ? (
                 <ul className="list-disc pl-5 mt-1 text-muted-foreground space-y-0.5">
                   {selectedEmotions.map(emotion => {
                     // Determinar el nombre final de la emoción para mostrar
-                    const emotionDisplayName = (emotion === "Otra(s)" && otherEmotions[emotion]?.trim()) 
-                                                ? otherEmotions[emotion].trim() 
-                                                : emotion;
+                    const emotionDisplayName = (emotion === "Otra(s)" && otherEmotions[emotion]?.trim())
+                      ? otherEmotions[emotion].trim()
+                      : emotion;
                     const intensityKey = emotionDisplayName; // Usar el nombre final para buscar intensidad
 
                     return (
                       <li key={`summary-${emotion}`}>
                         {emotionDisplayName} - <span className="font-medium text-foreground">{emotionIntensities[intensityKey] ?? 50}%</span>
-                        
+                        {/* Mostrar duración individual si existe */}
+                        {showIndividualDurations && individualDurations[emotionDisplayName] && (
+                          <span className="text-xs text-muted-foreground ml-2">
+                            ({getDurationLabel(individualDurations[emotionDisplayName])})
+                          </span>
+                        )}
+
                         {/* Sub-emociones (solo si la emoción principal NO es "Otra(s)" o si "Otra(s)" tiene sub-emociones predefinidas) */}
                         {emotion !== "Otra(s)" && selectedSubEmotions[emotion]?.length > 0 && (
                           <ul className="list-circle pl-5 text-xs">
                             {selectedSubEmotions[emotion].map(subEmotion => (
                               <li key={`summary-sub-${subEmotion}`}>
                                 {subEmotion} - <span className="font-medium text-foreground">{emotionIntensities[subEmotion] ?? 50}%</span>
+                                {/* Agregar duración individual para sub-emoción */}
+                                {showIndividualDurations && individualDurations[subEmotion] && (
+                                  <span className="text-xs text-muted-foreground ml-1">
+                                    ({getDurationLabel(individualDurations[subEmotion])})
+                                  </span>
+                                )}
                               </li>
                             ))}
                           </ul>
