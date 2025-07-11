@@ -21,8 +21,8 @@ const LazyMoodTrackerPage = React.lazy(() =>  import('@/pages/MoodTrackerPage').
 const LazyInteractiveStoriesListPage = React.lazy(() => import('@/pages/interactive/InteractiveStoriesListPage').then(module => ({ default: module.InteractiveStoriesListPage })));
 const LazyInteractiveStoryPlayerPage = React.lazy(() => import('@/pages/interactive/InteractiveStoryPlayerPage').then(module => ({ default: module.InteractiveStoryPlayerPage })));
 const LazyProfilePage = React.lazy(() => import('@/pages/auth/ProfilePage').then(module => ({ default: module.ProfilePage })));
-const LazyObservatoryPage = React.lazy(() => import('@/pages/ObservatoryPage').then(module => ({ default: module.ObservatoryPage })));
 const LazyEmbeddingLabPage = React.lazy(() => import('@/pages/admin/EmbeddingLabPage').then(module => ({ default: module.EmbeddingLabPage })));
+const LazyTestPlanetsPage = React.lazy(() => import('@/pages/planets/TestPlanetsPage').then(module => ({ default: module.default })));
 
 
 
@@ -146,8 +146,7 @@ export const AppRouter = () => {
 
         <Route path="mi-estado-animo" element={<React.Suspense fallback={<LoadingFallback />}> <LazyMoodTrackerPage /> </React.Suspense>  }/>
         <Route path="perfil"element={<React.Suspense fallback={<LoadingFallback />}> <LazyProfilePage /> </React.Suspense>  }/>        
-        <Route path="observatorio"element={<React.Suspense fallback={<LoadingFallback />}> <LazyObservatoryPage /> </React.Suspense>  }/>        
-
+        <Route path="planetas"element={<React.Suspense fallback={<LoadingFallback />}> <LazyTestPlanetsPage /> </React.Suspense>  }/>     
 
         {/* Rutas de Administración */}
         <Route

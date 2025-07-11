@@ -1,11 +1,11 @@
-// src/App.tsx
-
+// src/pages/TestPlanetsPage.tsx
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { EmotionalConstellation } from './EmotionalConstellation';
+import { EmotionalConstellation } from '@/components/planets/EmotionalConstellation';
+import StarsBackground from '@/components/planets/StarsBackground';
 import { useState } from 'react';
 
-function App() {
+function TestPlanetsPage() {
   const [selectedElement, setSelectedElement] = useState<any>(null);
 
   const handleElementClick = (element: any) => {
@@ -18,9 +18,19 @@ function App() {
   };
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#000' }}>
+    <div className="absolute inset-0 bg-gradient-to-b bg-[#040b1f] to-slate-900 overflow-hidden">
+      {/* Fondo de estrellas */}
+      <StarsBackground 
+        density={130}
+        baseSize={.3}
+        sizeVariation={2}
+        twinkleSpeed={4}
+        shootingStars={2}
+        className="z-0"
+      />
+      
       {/* Escena 3D */}
-      <Canvas camera={{ position: [0, 0, 8], fov: 75 }}>
+      <Canvas camera={{ position: [0, 0, 8], fov: 75 }} className="relative z-10">
         <ambientLight intensity={0.2} />
         <directionalLight position={[5, 5, 5]} intensity={0.3} />
         
@@ -92,4 +102,4 @@ function App() {
   );
 }
 
-export default App;
+export default TestPlanetsPage;
