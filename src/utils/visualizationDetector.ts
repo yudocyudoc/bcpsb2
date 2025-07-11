@@ -118,8 +118,8 @@ export function detectVisualization(moodEntry: MoodEntryWithMetrics): Visualizat
   const hasWorkContext = detectWorkContext(fullText);
   const hasStressEmotions = detectStressEmotions(emotions);
   
-  // REGLA 1: Pensamientos repetitivos
-  if (repeatedWords.hasRepeated && intensity > 0.6) {
+  // REGLA 1: Pensamientos repetitivos (menos estricta para testing)
+  if (repeatedWords.hasRepeated && intensity > 0.3) {
     return {
       type: 'circle_text_3d',
       characteristics: {
@@ -154,8 +154,8 @@ export function detectVisualization(moodEntry: MoodEntryWithMetrics): Visualizat
     };
   }
   
-  // REGLA 3: Día caótico general (sin contexto laboral)
-  if (chaosDetection.hasChaos && intensity > 0.7) {
+  // REGLA 3: Día caótico general (menos estricta para testing)
+  if (chaosDetection.hasChaos && intensity > 0.4) {
     return {
       type: 'deformed_mesh_3d',
       characteristics: {

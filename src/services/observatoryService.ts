@@ -27,11 +27,74 @@ function convertToFrontendFormat(entry: MoodEntryWithEmbedding): MoodEntryWithMe
     createdAtServer: entry.created_at,
     syncStatus: 'synced',
     embedding: entry.embedding,
-    pulse_intensity: Math.random() * 0.5 + 0.5,
-    pulse_complexity: Math.random() * 0.5 + 0.5,
-    pulse_duration_factor: Math.random() * 0.5 + 0.5,
-    pulse_valence: Math.random() * 0.5 + 0.5
+    // Generar métricas basadas en datos reales
+    pulse_intensity: calculateIntensity(entry),
+    pulse_complexity: calculateComplexity(entry),
+    pulse_duration_factor: calculateDurationFactor(entry),
+    pulse_valence: Math.random() * 2 - 1 // -1 to 1 por ahora
   };
+}
+
+// Calcular intensidad real basada en datos
+function calculateIntensity(entry: MoodEntryWithEmbedding): number {
+  if (!entry.intensidades) return 0.5;
+  
+  try {
+    const intensidades = typeof entry.intensidades === 'string' 
+      ? JSON.parse(entry.intensidades) 
+      : entry.intensidades;
+    
+    if (Array.isArray(intensidades) && intensidades.length > 0) {
+      const average = intensidades.reduce((sum, val) => sum + val, 0) / intensidades.length;
+      return Math.min(Math.max(average / 100, 0), 1); // Normalizar 0-100 a 0-1
+    }
+  } catch (e) {
+    console.warn('[ObservatoryService] Error parsing intensidades:', e);
+  }
+  
+  return 0.5;
+}
+
+// Calcular complejidad basada en cantidad de emociones
+function calculateComplexity(entry: MoodEntryWithEmbedding): number {
+  let totalEmotions = 0;
+  
+  // Contar emociones principales
+  if (entry.emociones_principales && Array.isArray(entry.emociones_principales)) {
+    totalEmotions += entry.emociones_principales.length;
+  }
+  
+  // Contar sub-emociones
+  if (entry.sub_emociones) {
+    try {
+      const subEmociones = typeof entry.sub_emociones === 'string' 
+        ? JSON.parse(entry.sub_emociones) 
+        : entry.sub_emociones;
+      
+      if (Array.isArray(subEmociones)) {
+        totalEmotions += subEmociones.length;
+      }
+    } catch (e) {
+      console.warn('[ObservatoryService] Error parsing sub_emociones:', e);
+    }
+  }
+  
+  // Normalizar: 1-3 emociones = baja complejidad, 10+ = alta complejidad
+  return Math.min(Math.max(totalEmotions / 10, 0), 1);
+}
+
+// Calcular factor de duración
+function calculateDurationFactor(entry: MoodEntryWithEmbedding): number {
+  if (!entry.duracion) return 0.5;
+  
+  const duracionMap: Record<string, number> = {
+    'minutos': 0.2,
+    'horas': 0.6,
+    'dia': 1.0,
+    'día': 1.0
+  };
+  
+  return duracionMap[entry.duracion.toLowerCase()] || 0.5;
 }
 
 export async function getWeeklyJourney(userId: string): Promise<MoodEntryWithMetrics[]> {
@@ -61,18 +124,20 @@ export async function getWeeklyJourney(userId: string): Promise<MoodEntryWithMet
     );
   }
 
-  // Date filter setup
+  // 🔧 TEMPORAL: Ampliar rango de fechas para testing (30 días en lugar de 7)
   const today = new Date();
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(today.getDate() - 7);
-  const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(today.getDate() - 30); // Cambiar a 30 días
+  const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
-  // Query principal
-  const { data: rawEntries, error } = await supabase
+  console.log('[ObservatoryService] Using date filter from:', thirtyDaysAgoISO, 'to:', today.toISOString());
+
+  // Query principal con rango ampliado
+  let { data: rawEntries, error } = await supabase
     .from('mood_entries')
     .select('*')
     .eq('user_id', userId)
-    .gte('created_at', sevenDaysAgoISO)
+    .gte('created_at', thirtyDaysAgoISO)
     .order('created_at', { ascending: false })
     .limit(7) as { data: MoodEntrySupabaseRow[] | null, error: any };
 
@@ -83,7 +148,25 @@ export async function getWeeklyJourney(userId: string): Promise<MoodEntryWithMet
 
   if (!rawEntries?.length) {
     console.log('[ObservatoryService] No entries returned from date-filtered query');
-    return [];
+    
+    // 🔧 FALLBACK: Si no hay entries en 30 días, tomar los 7 más recientes sin filtro de fecha
+    console.log('[ObservatoryService] Falling back to most recent 7 entries without date filter...');
+    
+    const fallbackResult = await supabase
+      .from('mood_entries')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(7) as { data: MoodEntrySupabaseRow[] | null, error: any };
+    
+    if (fallbackResult.error || !fallbackResult.data?.length) {
+      console.log('[ObservatoryService] No entries found even without date filter');
+      return [];
+    }
+    
+    console.log('[ObservatoryService] Using fallback entries:', fallbackResult.data.length);
+    // Usar fallback entries para el resto del procesamiento
+    rawEntries = fallbackResult.data;
   }
   
   // Process entries
