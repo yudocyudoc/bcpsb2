@@ -1,12 +1,13 @@
 // src/components/planets/EmotionalConstellation.tsx
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+//import { useFrame } from '@react-three/fiber';
 import { useAuth } from '@/contexts/AuthContext';
-import { TorusEnergyShader } from './TorusEnergyShader';
 import { detectVisualization, debugDetection, testDetectionBatch, type VisualizationConfig } from '@/utils/visualizationDetector';
+import { VisualizationRenderer } from './adapters/VisualizationRenderer';
 import * as observatoryService from '@/services/observatoryService';
 import type { MoodEntryWithMetrics } from '@/types/mood';
-//import * as THREE from 'three';
+import type { ObservatoryState, VisualizationEvent } from '@/types/visualizations';
 
 // Interface para elementos con detección
 interface EmotionalElementData extends MoodEntryWithMetrics {
@@ -15,78 +16,35 @@ interface EmotionalElementData extends MoodEntryWithMetrics {
   name: string;
 }
 
-interface EmotionalElementProps {
-  element: EmotionalElementData;
-  onClick: (element: EmotionalElementData) => void;
-}
-
-const EmotionalElement = ({ element, onClick }: EmotionalElementProps) => {
-  const handleClick = (event: any) => {
-    event.stopPropagation();
-    console.log('🎯 Element clicked:', {
-      id: element.localId,
-      type: element.visualConfig.type,
-      trigger: element.visualConfig.characteristics.primaryTrigger
-    });
-    onClick(element);
-  };
-
-  // Por ahora renderizamos todos como TorusEnergyShader
-  // Más adelante aquí irá el VisualizationRenderer
-  const renderVisualization = () => {
-    // Usar las métricas detectadas o las existentes
-    const intensity = element.visualConfig.characteristics.intensity;
-    const complexity = element.visualConfig.characteristics.complexity;
-    const valence = element.pulse_valence || 0.0;
-
-    return (
-      <TorusEnergyShader 
-        intensity={intensity}
-        complexity={complexity}
-        valence={valence}
-      />
-    );
-  };
-
-  return (
-    <group 
-      position={element.position} 
-      onClick={handleClick}
-      onPointerOver={() => {
-        // Mostrar hover message del detector
-        console.log('💭 Hover:', element.visualConfig.narrative.hoverMessage);
-      }}
-    >
-      {renderVisualization()}
-      
-      {/* Debug: Mostrar tipo de visualización como texto flotante */}
-      {process.env.NODE_ENV === 'development' && (
-        <mesh position={[0, 1.5, 0]}>
-          <planeGeometry args={[2, 0.3]} />
-          <meshBasicMaterial 
-            color={
-              element.visualConfig.type === 'circle_text_3d' ? '#ff6b6b' :
-              element.visualConfig.type === 'deformed_mesh_3d' ? '#4ecdc4' :
-              '#95e1d3'
-            }
-            transparent 
-            opacity={0.7} 
-          />
-        </mesh>
-      )}
-    </group>
-  );
-};
-
 interface EmotionalConstellationProps {
   onElementClick?: (element: EmotionalElementData) => void;
+  onStateChange?: (state: ObservatoryState) => void;
+  onEvent?: (event: VisualizationEvent) => void;
 }
 
-export const EmotionalConstellation = ({ onElementClick }: EmotionalConstellationProps) => {
+export const EmotionalConstellation = ({ 
+  onElementClick, 
+  onStateChange,
+  onEvent 
+}: EmotionalConstellationProps) => {
   const { profile } = useAuth();
   const [emotionalElements, setEmotionalElements] = useState<EmotionalElementData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [observatoryState, setObservatoryState] = useState<ObservatoryState>('discovering');
+  // const [hoveredElement, setHoveredElement] = useState<string | null>(null);
+  
+  // Performance: Pausar animaciones cuando la pestaña no está activa
+  const [isTabActive, setIsTabActive] = useState(true);
+  
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsTabActive(document.visibilityState === 'visible');
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Cargar datos reales del usuario
   useEffect(() => {
@@ -125,7 +83,7 @@ export const EmotionalConstellation = ({ onElementClick }: EmotionalConstellatio
             debugDetection(entry);
           }
           
-          // Generar posición en espiral
+          // Generar posición en espiral optimizada
           const angle = (index * 0.8) % (Math.PI * 2);
           const radius = 3 + index * 0.7;
           const height = Math.sin(index * 0.3) * 2;
@@ -176,9 +134,49 @@ export const EmotionalConstellation = ({ onElementClick }: EmotionalConstellatio
     loadEmotionalData();
   }, [profile]);
 
+  // Manejar eventos de interacción
   const handleElementClick = (element: EmotionalElementData) => {
+    console.log('🎯 Element clicked:', {
+      id: element.localId,
+      type: element.visualConfig.type,
+      trigger: element.visualConfig.characteristics.primaryTrigger
+    });
+
+    // Cambiar estado a inmersión
+    setObservatoryState('immersed');
+    onStateChange?.('immersed');
+    
+    // Emitir evento
+    onEvent?.({
+      type: 'click',
+      data: { elementId: element.localId, transition: 'zoom' }
+    });
+    
     onElementClick?.(element);
   };
+
+  const handleElementHover = (element: EmotionalElementData, hovered: boolean) => {
+    if (hovered) {
+      // setHoveredElement(element.localId);
+      console.log('💭 Hover:', element.visualConfig.narrative.hoverMessage);
+      
+      // Emitir evento de hover
+      onEvent?.({
+        type: 'hover',
+        data: { 
+          elementId: element.localId, 
+          message: element.visualConfig.narrative.hoverMessage 
+        }
+      });
+    } else {
+      // setHoveredElement(null);
+    }
+  };
+
+  // Performance: Solo animar elementos visibles
+  const visibleElements = useMemo(() => {
+    return emotionalElements.filter((_, index) => index < 10); // Limitar elementos renderizados
+  }, [emotionalElements]);
 
   // Loading state
   if (loading) {
@@ -221,18 +219,37 @@ export const EmotionalConstellation = ({ onElementClick }: EmotionalConstellatio
 
   return (
     <>
-      {emotionalElements.map((element) => (
-        <EmotionalElement
+      {/* Renderizar elementos visibles con el nuevo sistema */}
+      {visibleElements.map((element) => (
+        <VisualizationRenderer
           key={element.localId}
-          element={element}
-          onClick={handleElementClick}
+          moodEntry={element}
+          visualConfig={element.visualConfig}
+          position={element.position}
+          isActive={isTabActive && observatoryState === 'discovering'}
+          onClick={() => handleElementClick(element)}
+          onHover={(hovered) => handleElementHover(element, hovered)}
         />
       ))}
       
       {/* Debug: Estadísticas flotantes en desarrollo */}
       {process.env.NODE_ENV === 'development' && (
-        <group position={[-5, 3, 0]}>
-          {/* Aquí podríamos añadir un panel de debug 3D */}
+        <group position={[-6, 4, 0]}>
+          <mesh>
+            <planeGeometry args={[4, 2]} />
+            <meshBasicMaterial color="#1a1a2e" transparent opacity={0.8} />
+          </mesh>
+          {/* Aquí podríamos añadir texto 3D con estadísticas */}
+        </group>
+      )}
+      
+      {/* Performance indicator */}
+      {process.env.NODE_ENV === 'development' && !isTabActive && (
+        <group position={[0, 5, 0]}>
+          <mesh>
+            <planeGeometry args={[3, 0.5]} />
+            <meshBasicMaterial color="#ff9800" transparent opacity={0.8} />
+          </mesh>
         </group>
       )}
     </>
