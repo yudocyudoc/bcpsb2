@@ -1,4 +1,6 @@
 // src/components/observatory/OrganicPulse.tsx
+// Actualizado para usar mapeo determinístico
+
 import { useState, useMemo } from 'react'
 import { MoodEntryWithMetrics } from '@/types/mood'
 import { mapMetricsToVisuals } from './utils/pulseMetricsMapper'
@@ -13,7 +15,7 @@ interface OrganicPulseProps {
 export function OrganicPulse({ entry, position, onClick }: OrganicPulseProps) {
   const [hovered, setHovered] = useState(false)
 
-  // Propiedades visuales basadas en las métricas del pulso
+  // Propiedades visuales basadas en las métricas del pulso (DETERMINÍSTICAS)
   const visualProps = useMemo(() => {
     // Usar las nuevas métricas si están disponibles, sino usar valores por defecto
     const metrics = {
@@ -22,7 +24,9 @@ export function OrganicPulse({ entry, position, onClick }: OrganicPulseProps) {
       pulse_duration_factor: entry.pulse_duration_factor ?? 0.5,
       pulse_valence: entry.pulse_valence ?? 0.5
     };
-    return mapMetricsToVisuals(metrics);
+    
+    // ✅ PASAR EL ID PARA DETERMINISMO
+    return mapMetricsToVisuals(metrics, entry.localId || entry.serverId || '');
   }, [entry]);
 
   return (
